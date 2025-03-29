@@ -172,3 +172,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Project files
+Task07_Pancreas
+._Task07_Pancreas
+
