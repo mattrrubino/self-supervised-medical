@@ -8,6 +8,7 @@ def crop(data: np.ndarray, normalize: bool = True, threshold: float = 0.05) -> t
     if normalize:
         data = (data - data.min()) / (data.max() - data.min())
 
+    # Compute the 3D bounding box
     sx, ex, sy, ey, sz, ez = 0, 0, 0, 0, 0, 0
     for x in range(data.shape[0]):
         if np.any(data[x, :, :] > threshold):
@@ -39,11 +40,20 @@ def crop(data: np.ndarray, normalize: bool = True, threshold: float = 0.05) -> t
 
 def pretext_preprocess(x: np.ndarray, y: np.ndarray, resolution=(128,128,128)) -> tuple[np.ndarray, np.ndarray]:
     assert len(x) == len(y),"Must have an equal number of inputs and outputs"
+
+    # Crop to bounding box
     cropped_x = [crop(entry) for entry in x]
     cropped_y = [label[sx:ex,sy:ey,sz:ez] for label,(_,(sx,ex,sy,ey,sz,ez)) in zip(y, cropped_x)]
-    out_x = [skTrans.resize(entry, resolution, order=1, preserve_range=True) for entry,_ in cropped_x]
-    out_y = [skTrans.resize(entry, resolution, order=1, preserve_range=True) for entry in cropped_y]
-    return np.array(out_x), np.array(out_y)
+
+    # Resize with interpolation
+    out_x = np.array([skTrans.resize(entry, resolution, order=1, preserve_range=True) for entry,_ in cropped_x])
+    out_y = np.array([skTrans.resize(entry, resolution, order=1, preserve_range=True) for entry in cropped_y])
+
+    # Add channel dimension (grayscale)
+    out_x = np.expand_dims(out_x, axis=1)
+    out_y = np.expand_dims(out_y, axis=1)
+
+    return out_x, out_y
 
 
 def rotation_preprocess(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -57,23 +67,23 @@ def rotation_preprocess(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         if r == 0:
             x_rot.append(data)
         elif r == 1:
-            x_rot.append(np.transpose(np.flip(data, 1), (1, 0, 2)))
+            x_rot.append(np.transpose(np.flip(data, 2), (0, 2, 1, 3)))
         elif r == 2:
-            x_rot.append(np.flip(data, (0, 1)))
-        elif r == 3:
-            x_rot.append(np.flip(np.transpose(data, (1, 0, 2)), 1))
-        elif r == 4:
-            x_rot.append(np.transpose(np.flip(data, 1), (0, 2, 1)))
-        elif r == 5:
             x_rot.append(np.flip(data, (1, 2)))
+        elif r == 3:
+            x_rot.append(np.flip(np.transpose(data, (0, 2, 1, 3)), 2))
+        elif r == 4:
+            x_rot.append(np.transpose(np.flip(data, 2), (0, 1, 3, 2)))
+        elif r == 5:
+            x_rot.append(np.flip(data, (2, 3)))
         elif r == 6:
-            x_rot.append(np.flip(np.transpose(data, (0, 2, 1)), 1))
+            x_rot.append(np.flip(np.transpose(data, (0, 1, 3, 2)), 2))
         elif r == 7:
-            x_rot.append(np.transpose(np.flip(data, 0), (2, 1, 0)))
+            x_rot.append(np.transpose(np.flip(data, 1), (0, 3, 2, 1)))
         elif r == 8:
-            x_rot.append(np.flip(data, (0, 2)))
+            x_rot.append(np.flip(data, (1, 3)))
         elif r == 9:
-            x_rot.append(np.flip(np.transpose(data, (2, 1, 0)), 0))
+            x_rot.append(np.flip(np.transpose(data, (0, 3, 2, 1)), 1))
         y_rot[i,r] = 1
 
     return np.array(x_rot), y_rot
