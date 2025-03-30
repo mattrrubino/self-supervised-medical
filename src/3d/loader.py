@@ -1,7 +1,7 @@
 import nibabel as nib
 import numpy as np
 
-from pretext_3d import pretext_preprocess, rotation_preprocess
+from pretext import preprocess, rotation_preprocess
 
 
 def load_files(files: list[str]) -> np.ndarray:
@@ -12,7 +12,7 @@ def load_files(files: list[str]) -> np.ndarray:
 x = load_files(["../Task07_Pancreas/imagesTr/pancreas_001.nii.gz"])
 y = load_files(["../Task07_Pancreas/labelsTr/pancreas_001.nii.gz"])
 
-x, y = pretext_preprocess(x, y)
+x, y = preprocess(x, y)
 x_rot, y_rot = rotation_preprocess(x)
 print(x_rot.shape, y_rot)
 

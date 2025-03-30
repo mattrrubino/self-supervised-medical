@@ -38,7 +38,7 @@ def crop(data: np.ndarray, normalize: bool = True, threshold: float = 0.05) -> t
     return data[sx:ex,sy:ey,sz:ez], (sx,ex,sy,ey,sz,ez)
 
 
-def pretext_preprocess(x: np.ndarray, y: np.ndarray, resolution=(128,128,128)) -> tuple[np.ndarray, np.ndarray]:
+def preprocess(x: np.ndarray, y: np.ndarray, resolution=(128,128,128)) -> tuple[np.ndarray, np.ndarray]:
     assert len(x) == len(y),"Must have an equal number of inputs and outputs"
 
     # Crop to bounding box
