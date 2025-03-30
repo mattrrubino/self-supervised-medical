@@ -5,6 +5,7 @@ from PIL import Image
 import pandas as pd
 import os 
 from pretext_2d import rotate_2dimages
+from torch.utils.data import random_split
 
 
 #custom dataset class to load the training 
@@ -21,8 +22,8 @@ class Retinal2dDataset(Dataset):
         self.df = pd.read_csv(preds_file)
         
         
-        self.image_paths = self.df['id_code'].values[:64] + ".png"
-        self.labels = self.df['diagnosis'][:64].values
+        self.image_paths = self.df['id_code'].values + ".png"
+        self.labels = self.df['diagnosis'].values
 
         self.task = task
         
@@ -70,8 +71,17 @@ def load_2dimages(batch_size = 32):
 
     image_dataset = Retinal2dDataset(preds_file="/home/caleb/school/deep_learning/self-supervised-medical/dataset/2d/train.csv", 
         image_dir= "/home/caleb/school/deep_learning/self-supervised-medical/dataset/2d/train_images", transform=transform)
-    
-    dataloader = DataLoader(image_dataset, batch_size, shuffle=True)
 
-    return dataloader
+    train_size = int(0.85 * len(image_dataset))
+    val_size = len(image_dataset) - train_size
+
+    
+    train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
+
+    # Create DataLoaders for both training and validation
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+
+    return train_loader, val_loader
 
