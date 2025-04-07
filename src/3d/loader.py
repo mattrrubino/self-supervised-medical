@@ -1,18 +1,99 @@
+import math
+import os
+import sys
+
 import nibabel as nib
 import numpy as np
+from torch.utils.data import Dataset
 
-from pretext import preprocess, rotation_preprocess
-
-
-def load_files(files: list[str]) -> np.ndarray:
-    imgs = [nib.load(file) for file in files] # pyright: ignore
-    return np.array([img.get_fdata() for img in imgs]) # pyright: ignore
+from pretext import x_preprocess, xy_preprocess, rotation_preprocess
 
 
-x = load_files(["../Task07_Pancreas/imagesTr/pancreas_001.nii.gz"])
-y = load_files(["../Task07_Pancreas/labelsTr/pancreas_001.nii.gz"])
+# Pancreas dataset constants
+PANCREAS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "Task07_Pancreas")
+PANCREAS_IMAGES_TR_PATH = os.path.join(PANCREAS_PATH, "imagesTr")
+PANCREAS_IMAGES_TR_CACHE = os.path.join(PANCREAS_PATH, ".imagesTr.npy")
+PANCREAS_IMAGES_TR = [os.path.join(PANCREAS_IMAGES_TR_PATH, x) for x in os.listdir(PANCREAS_IMAGES_TR_PATH) if not x.startswith(".")]
+PANCREAS_LABELS_TR_PATH = os.path.join(PANCREAS_PATH, "labelsTr")
+PANCREAS_LABELS_TR_CACHE = os.path.join(PANCREAS_PATH, ".labelsTr.npy")
+PANCREAS_LABELS_TR = [os.path.join(PANCREAS_LABELS_TR_PATH, x) for x in os.listdir(PANCREAS_LABELS_TR_PATH) if not x.startswith(".")]
+PANCREAS_IMAGES_TS_PATH = os.path.join(PANCREAS_PATH, "imagesTs")
+PANCREAS_IMAGES_TS_CACHE = os.path.join(PANCREAS_PATH, ".imagesTs.npy")
+PANCREAS_IMAGES_TS = [os.path.join(PANCREAS_IMAGES_TS_PATH, x) for x in os.listdir(PANCREAS_IMAGES_TS_PATH) if not x.startswith(".")]
 
-x, y = preprocess(x, y)
-x_rot, y_rot = rotation_preprocess(x)
-print(x_rot.shape, y_rot)
+
+def bar(percent, length=20) -> str:
+    full = math.floor(percent*length)
+    empty = length - full
+    text = str(math.floor(percent*100))+"%"
+    return "[" + "#"*full + " "*empty + "] " + text
+
+
+# Cache the preprocessed datasets on disk
+if not os.path.exists(PANCREAS_IMAGES_TR_CACHE) or not os.path.exists(PANCREAS_LABELS_TR_CACHE):
+    print("Could not find preprocessed pancreas training data on disk. Generating...")
+    x_out = []
+    y_out = []
+    for i, (x_file, y_file) in enumerate(zip(PANCREAS_IMAGES_TR, PANCREAS_LABELS_TR)):
+        percent = i / len(PANCREAS_LABELS_TR)
+        sys.stdout.write("\r"+bar(percent))
+        sys.stdout.flush()
+        x = nib.load(x_file).get_fdata() # pyright: ignore
+        y = nib.load(y_file).get_fdata() # pyright: ignore
+        x, y = xy_preprocess(x, y)
+        x_out.append(x)
+        y_out.append(y)
+    sys.stdout.write("\r"+" "*50+"\r")
+    sys.stdout.flush()
+    print("Saving...")
+    np.save(PANCREAS_IMAGES_TR_CACHE, np.stack(x_out))
+    np.save(PANCREAS_LABELS_TR_CACHE, np.stack(y_out))
+if not os.path.exists(PANCREAS_IMAGES_TS_CACHE):
+    print("Could not find preprocessed pancreas testing data on disk. Generating...")
+    x_out = []
+    for i, x_file in enumerate(PANCREAS_IMAGES_TS):
+        percent = i / len(PANCREAS_IMAGES_TS)
+        sys.stdout.write("\r"+bar(percent))
+        sys.stdout.flush()
+        x = nib.load(x_file).get_fdata() # pyright: ignore
+        x = x_preprocess(x)
+        x_out.append(x)
+    sys.stdout.write("\r"+" "*50+"\r")
+    sys.stdout.flush()
+    print("Saving...")
+    np.save(PANCREAS_IMAGES_TS_CACHE, np.stack(x_out))
+
+
+class PancreasDataset(Dataset):
+    def __init__(self):
+        self.x = np.load(PANCREAS_IMAGES_TR_CACHE)
+        self.y = np.load(PANCREAS_LABELS_TR_CACHE)
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, idx):
+        return self.x[idx], self.y[idx]
+
+
+class PancreasPretextDataset(Dataset):
+    def __init__(self, pretext_preprocess):
+        self.pretext_preprocess = pretext_preprocess
+        self.x = np.concat((np.load(PANCREAS_IMAGES_TR_CACHE), np.load(PANCREAS_IMAGES_TS_CACHE)))
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, idx):
+        return self.pretext_preprocess(self.x[idx])
+
+
+if __name__ == "__main__":
+    dataset = PancreasDataset()
+    print(dataset.x.shape, dataset.y.shape)
+    print(len(dataset))
+
+    other = PancreasPretextDataset(rotation_preprocess)
+    print(other.x.shape)
+    print(len(other))
 
