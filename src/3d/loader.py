@@ -4,8 +4,10 @@ import sys
 
 import nibabel as nib
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 
+from model import UNet3d, UNet3dEncoder, UNet3dDecoder
 from pretext import x_preprocess, xy_preprocess, rotation_preprocess
 
 
@@ -66,8 +68,8 @@ if not os.path.exists(PANCREAS_IMAGES_TS_CACHE):
 
 class PancreasDataset(Dataset):
     def __init__(self):
-        self.x = np.load(PANCREAS_IMAGES_TR_CACHE)
-        self.y = np.load(PANCREAS_LABELS_TR_CACHE)
+        self.x = torch.from_numpy(np.load(PANCREAS_IMAGES_TR_CACHE)).float()
+        self.y = torch.from_numpy(np.load(PANCREAS_LABELS_TR_CACHE)).long()
 
     def __len__(self):
         return len(self.x)
@@ -79,7 +81,7 @@ class PancreasDataset(Dataset):
 class PancreasPretextDataset(Dataset):
     def __init__(self, pretext_preprocess):
         self.pretext_preprocess = pretext_preprocess
-        self.x = np.concat((np.load(PANCREAS_IMAGES_TR_CACHE), np.load(PANCREAS_IMAGES_TS_CACHE)))
+        self.x = torch.from_numpy(np.concat((np.load(PANCREAS_IMAGES_TR_CACHE), np.load(PANCREAS_IMAGES_TS_CACHE)))).float()
 
     def __len__(self):
         return len(self.x)
@@ -90,10 +92,11 @@ class PancreasPretextDataset(Dataset):
 
 if __name__ == "__main__":
     dataset = PancreasDataset()
-    print(dataset.x.shape, dataset.y.shape)
-    print(len(dataset))
+    model = UNet3d(UNet3dEncoder(1), UNet3dDecoder(3))
 
-    other = PancreasPretextDataset(rotation_preprocess)
-    print(other.x.shape)
-    print(len(other))
+    loss = torch.nn.CrossEntropyLoss()
+    x, y = dataset[:3]
+    preds = model(x)
+
+    print(f"Loss: {loss(preds, y)}")
 

@@ -51,7 +51,6 @@ def xy_preprocess(x: np.ndarray, y: np.ndarray, resolution=(128,128,128)) -> tup
 
     # Add channel dimension (grayscale)
     out_x = np.expand_dims(out_x, axis=0)
-    out_y = np.expand_dims(out_y, axis=0)
 
     return out_x, out_y
 
@@ -97,5 +96,7 @@ def rotation_preprocess(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     else:
         x_rot = x
 
+    # TODO: Might need to make these Tensor objects
+    # TODO: Make sure they are floats (not doubles)
     return x_rot, y_rot
 
