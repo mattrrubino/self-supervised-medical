@@ -3,6 +3,27 @@ import torch.nn.functional as F
 from torch import nn
 
 
+class MulticlassClassifier(nn.Module):
+    def __init__(self, in_features, out_features, p=0.5):
+        super().__init__()
+        self.l0 = nn.Linear(in_features, 512)
+        self.bn0 = nn.BatchNorm1d(512)
+        self.d0 = nn.Dropout1d(p)
+        self.l1 = nn.Linear(512, 512)
+        self.bn1 = nn.BatchNorm1d(512)
+        self.l2 = nn.Linear(512, out_features)
+
+    def forward(self, x):
+        x = torch.flatten(x, start_dim=1)
+        x = F.relu(self.l0(x))
+        x = self.bn0(x)
+        x = self.d0(x)
+        x = F.relu(self.l1(x))
+        x = self.bn1(x)
+        x = self.l2(x)
+        return x
+
+
 class Conv3dBlock(nn.Module):
     def __init__(self, filters_in, filters_out, kernel_size=3, padding="same", dropout=0.3):
         super().__init__()
@@ -24,7 +45,7 @@ class Conv3dBlock(nn.Module):
 
 
 class UNet3dEncoder(nn.Module):
-    def __init__(self, filters_in, filters=16, num_layers=4, kernel_size=3):
+    def __init__(self, filters_in, filters=32, num_layers=5, kernel_size=3):
         super().__init__()
         self.layers = nn.ModuleList([
             Conv3dBlock(filters_in, filters, kernel_size=kernel_size),
@@ -48,7 +69,7 @@ class UNet3dEncoder(nn.Module):
 
 
 class UNet3dDecoder(nn.Module):
-    def __init__(self, filters_out, filters=16, num_layers=4, kernel_size=3):
+    def __init__(self, filters_out, filters=32, num_layers=4, kernel_size=3):
         super().__init__()
         self.layers = nn.ModuleList([
             Conv3dBlock(filters*(2**i), filters*(2**(i-1)), kernel_size=kernel_size)
