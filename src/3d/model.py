@@ -69,7 +69,7 @@ class UNet3dEncoder(nn.Module):
 
 
 class UNet3dDecoder(nn.Module):
-    def __init__(self, filters_out, filters=32, num_layers=4, kernel_size=3):
+    def __init__(self, filters_out, filters=32, num_layers=5, kernel_size=3):
         super().__init__()
         self.layers = nn.ModuleList([
             Conv3dBlock(filters*(2**i), filters*(2**(i-1)), kernel_size=kernel_size)

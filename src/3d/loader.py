@@ -107,7 +107,8 @@ if __name__ == "__main__":
 
     # Finetune
     dataset = PancreasDataset()
-    model = UNet3d(encoder, UNet3dDecoder(3))
+    decoder = UNet3dDecoder(3)
+    model = UNet3d(encoder, decoder)
 
     x, y = dataset[:3]
     preds = model(x)
