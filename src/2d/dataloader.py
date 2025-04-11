@@ -44,11 +44,13 @@ class Retinal2dDataset(Dataset):
             
             if self.task == "rotate":
                 image, rotation_label = rotate_2dimages(image)
+                self.rotated_labels.append(rotation_label)
             if self.transform:
                 image = self.transform(image)
             
             self.images.append(image)
-            self.rotated_labels.append(rotation_label)
+            
+            
             
 
     def __getitem__(self, idx):
@@ -56,13 +58,17 @@ class Retinal2dDataset(Dataset):
         label = None
         if self.task == "rotate":
             label = self.rotated_labels[idx]
+        
+        #we want the actual labels for the finetune task
+        if self.task == "finetune":
+            label = self.labels[idx]
 
         return img, label
 
 
 #@def function returns a loaded image dataloader of the function
 #@param batchsize are the size of the batches
-def load_2dimages(batch_size = 32):
+def load_2dimages(batch_size = 32, task = "rotate"):
     #transform the images 
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -70,7 +76,7 @@ def load_2dimages(batch_size = 32):
     ])
 
     image_dataset = Retinal2dDataset(preds_file="/home/caleb/school/deep_learning/self-supervised-medical/dataset/2d/train.csv", 
-        image_dir= "/home/caleb/school/deep_learning/self-supervised-medical/dataset/2d/train_images", transform=transform)
+        image_dir= "/home/caleb/school/deep_learning/self-supervised-medical/dataset/2d/train_images", transform=transform, task=task)
 
     train_size = int(0.85 * len(image_dataset))
     val_size = len(image_dataset) - train_size

@@ -20,9 +20,9 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
             optimizer.zero_grad()
             
             outputs = model(inputs)
-
-            labels = torch.argmax(labels, dim=1)
-            labels = labels.squeeze()
+            if task == "rotate":
+                labels = torch.argmax(labels, dim=1)
+                labels = labels.squeeze()
             loss = criterion(outputs, labels)
             
             loss.backward()
@@ -31,8 +31,8 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
             running_loss += loss.item()
         running_loss = running_loss / len(train_dataloader)
         print(f'Epoch {epoch+1}/{num_epochs}, Loss: {running_loss}')
-        val_loss = validate(model, val_dataloader, criterion, epoch, num_epochs, device)
-        if epoch % 5 == 0 and epoch != 0:
+        val_loss = validate(model, val_dataloader, criterion, epoch, num_epochs, device, task)
+        if (epoch % 5 == 0  or epoch == num_epochs -1) and epoch != 0:
             save_checkpoint(model, running_loss, val_loss, epoch, optimizer, task)
             print(f"Checkpoint saved at epoch {epoch}")
 
@@ -50,7 +50,7 @@ def save_checkpoint(model, train_loss, val_loss, epoch, optimizer, task):
     torch.save(checkpoint, filepath)
 
 
-def validate(model, val_dataloader, criterion, epoch, num_epochs, device):
+def validate(model, val_dataloader, criterion, epoch, num_epochs, device, task):
     model.eval()
     running_loss = 0
     for inputs, labels in val_dataloader:
@@ -58,8 +58,9 @@ def validate(model, val_dataloader, criterion, epoch, num_epochs, device):
         labels = labels.to(device)
         outputs = model(inputs)
         
-        labels = torch.argmax(labels, dim=1)
-        labels = labels.squeeze()
+        if task == "rotate":
+            labels = torch.argmax(labels, dim=1)
+            labels = labels.squeeze()
         loss = criterion(outputs, labels)
 
         running_loss += loss.item()
