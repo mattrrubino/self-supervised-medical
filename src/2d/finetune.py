@@ -4,19 +4,18 @@ import torchvision.models as models
 import torch.optim as optim
 import torch.nn as nn
 from train2D import train
+from sklearn.model_selection import KFold
+from torch.utils.data import Subset, DataLoader
+import numpy as np
+from eval import plot_kappa
+import random
 
-
-def main():
-    task = input("What task are we finetuning for (rotate): ")
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    print("Using device: " + str(device))
-    
+#we need to reset the model after each % of dataset training
+def reset_model_weights(pre_task = "rotate", device="cuda"):
     model = models.densenet121(weights=None)
-    if(task == "rotate"):
+    if pre_task == "rotate":
         
-        checkpoint = torch.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/rotate/checkpoint19.pth")
+        checkpoint = torch.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/rotate/checkpoint50.pth")
         
         #only used for helping with shape requirments while loading
         model.classifier = torch.nn.Linear(model.classifier.in_features, 4)
@@ -25,33 +24,80 @@ def main():
         model.load_state_dict(checkpoint["model_state_dict"])
 
         model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
-        
 
-    task = task + "_finetune"
     model.to(device)
-
-    #we only want to finetune the classifier, not the densenet features
-    for param in model.features.parameters():
-        param.requires_grad = False
 
     optimzer = optim.Adam(model.classifier.parameters(), lr=0.00005)
 
     criterion = nn.CrossEntropyLoss()
+
+    for param in model.features.parameters():
+        param.requires_grad = False
+    
+    return model, optimzer, criterion
+    
+
+
+def main():
+    pre_task = input("What task are we finetuning for (rotate): ")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print("Using device: " + str(device))
+    
+    #we only want to finetune the classifier, not the densenet features
+    model, optimzer, criterion = reset_model_weights(pre_task, device)
+    task = "finetune"
+    
     print("preprocessing images, this might take a moment ...")
-    train_dataloader, val_dataloader = load_2dimages(task="finetune")
+    dataset = load_2dimages(task=task)
+    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
     print("preprocessing done, begining training ...")
 
-    train(train_dataloader, val_dataloader, 20, model, optimzer, criterion, task, device)
+    
+    training_percent = np.array([0.05, 0.10, 0.20, 0.50, 1.00])
+    all_kappa_scores = np.zeros(len(training_percent))
+    for i in range(0, len(training_percent)):
+        if(i != 0):
+            #we need to reset the model weights after testing on the previous training percent
+            model, optimzer, criterion  = reset_model_weights(pre_task)
+            
+        mean_kappa_scores = 0
+        for fold, (train_ids, val_ids) in enumerate(kfold.split(dataset)):
+            print(f'\nFOLD {fold + 1}')
+            print('--------------------------------')
+            
+            train_pool = list(train_ids)
+    
+            # Sample only a percent of the training depending on the training_percent
+            subset_size = int(training_percent[i] * len(train_pool))
+            sampled_train_ids = random.sample(train_pool, subset_size)
+            
+            
+            train_subsampler = Subset(dataset, sampled_train_ids)
+            val_subsampler = Subset(dataset, val_ids)
+            
+            
+            train_dataloader = DataLoader(train_subsampler, batch_size=32, shuffle=True)
+            val_dataloader = DataLoader(val_subsampler, batch_size=32, shuffle=True)
+            
+            kappa_score = train(train_dataloader, val_dataloader, 20, model, optimzer, criterion, task, device, fold)
+            mean_kappa_scores += kappa_score
+    
+
+        mean_kappa_scores = mean_kappa_scores / 5
+        all_kappa_scores[i] = mean_kappa_scores
+    
+    np.save("kappa_scores_" + pre_task + ".npy", mean_kappa_scores)
+    print(all_kappa_scores.shape)
+    print(training_percent.shape)
+    plot_kappa(all_kappa_scores, training_percent)
+    
 
 
     
 
-
-
-
-
-
-
+        
+    
+    
 
 if __name__ == "__main__":
     main()

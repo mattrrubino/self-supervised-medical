@@ -3,6 +3,10 @@ import torch
 import torchvision.models as models
 import torch.optim as optim
 import torch.nn as nn
+from sklearn.metrics import f1_score, cohen_kappa_score
+import numpy as np
+
+#used when finetuing the model
 
 
 #@def trains the model
@@ -10,10 +14,18 @@ import torch.nn as nn
 #@param num_epochs is how many epochs we want to train for
 #@param is th emodel we are training
 #@param optimizer is the optimizer we are using
-def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, task, device):
+def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, task, device, fold=None):
     model.train()
+    
+    #final valdiation score
+    val_score = 0
+    
     for epoch in range(num_epochs):
         running_loss = 0
+
+        all_outputs = []
+        all_labels = []
+
         for inputs, labels in train_dataloader:
             inputs = inputs.to(device)
             labels = labels.to(device)
@@ -25,20 +37,47 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
                 labels = labels.squeeze()
             loss = criterion(outputs, labels)
             
+            
+            all_labels = all_labels + labels.cpu().tolist()
+            all_outputs = all_outputs + torch.argmax(outputs.detach(), dim=1).cpu().tolist()
+
+            
             loss.backward()
             optimizer.step()
 
             running_loss += loss.item()
         running_loss = running_loss / len(train_dataloader)
+        
         print(f'Epoch {epoch+1}/{num_epochs}, Loss: {running_loss}')
-        val_loss = validate(model, val_dataloader, criterion, epoch, num_epochs, device, task)
-        if (epoch % 5 == 0  or epoch == num_epochs -1) and epoch != 0:
-            save_checkpoint(model, running_loss, val_loss, epoch, optimizer, task)
+        metrics(all_outputs, all_labels, task, "train")
+        
+
+        val_loss, val_score = validate(model, val_dataloader, criterion, epoch, num_epochs, device, task)
+        if (epoch % 50 == 0  or epoch == num_epochs -1) and epoch != 0:
+            save_checkpoint(model, running_loss, val_loss, epoch, optimizer, task, fold)
             print(f"Checkpoint saved at epoch {epoch}")
 
+        
+    if task == "finetune":
+        return val_score
 
 
-def save_checkpoint(model, train_loss, val_loss, epoch, optimizer, task):
+def metrics(outputs, labels, task, split, epoch=None, num_epochs=None):
+    if task == "rotate":
+        f1 = f1_score(labels, outputs, average='macro')
+        print(f"F1 {split} Score: {f1}")
+    if task == "finetune":
+        kappa = cohen_kappa_score(labels, outputs, weights='quadratic')
+        print(f"Kappa {split} Score: {kappa}")
+        if split == "val" and epoch == (num_epochs - 1):
+            cross_validation_score = kappa
+            return cross_validation_score
+
+    return None    
+
+
+
+def save_checkpoint(model, train_loss, val_loss, epoch, optimizer, task,fold=None):
     checkpoint = {
         'epoch': epoch,
         'model_state_dict': model.state_dict(),
@@ -46,13 +85,20 @@ def save_checkpoint(model, train_loss, val_loss, epoch, optimizer, task):
         'train_loss': train_loss, 
         'val_loss': val_loss 
     }
-    filepath = "/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + ".pth"
+    if fold is not None:
+        filepath = "/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + "_fold" + str(fold) + ".pth"
+    else:
+        filepath = "/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + ".pth"
     torch.save(checkpoint, filepath)
 
 
 def validate(model, val_dataloader, criterion, epoch, num_epochs, device, task):
     model.eval()
     running_loss = 0
+    
+    all_outputs = []
+    all_labels = []
+    
     for inputs, labels in val_dataloader:
         inputs = inputs.to(device)
         labels = labels.to(device)
@@ -63,26 +109,28 @@ def validate(model, val_dataloader, criterion, epoch, num_epochs, device, task):
             labels = labels.squeeze()
         loss = criterion(outputs, labels)
 
+        all_labels = all_labels + labels.cpu().tolist()
+        all_outputs = all_outputs + torch.argmax(outputs.detach(), dim=1).cpu().tolist() 
+
         running_loss += loss.item()
     
     running_loss = running_loss / len(val_dataloader)
     print(f'Epoch {epoch+1}/{num_epochs}, Validation Loss: {running_loss}')
-    return running_loss
-
-
-
+    score = metrics(all_outputs, all_labels, task, "val", epoch, num_epochs)
+    
+    return running_loss, score
 
 
 
 def main():
     
-    model = models.densenet121(pretrained=False)
+    model = models.densenet121(weights=None)
     
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
     task = input("What Task are we solving for (rotate): ")
-    num_epochs = int(input("How many epochs we trying to do (paper recomends 20 for 2D tasks): "))
+    num_epochs = int(input("How many epochs we trying to do (paper recomends 1000 for training for 2D tasks): "))
 
     print("Using device: " + str(device))
 
@@ -99,6 +147,7 @@ def main():
     print("preprocessing images, this might take a moment ...")
     train_dataloader, val_dataloader = load_2dimages()
     print("preprocessing done, begining training ...")
+
 
     train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, task, device)
     

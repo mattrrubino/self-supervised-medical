@@ -68,7 +68,7 @@ class Retinal2dDataset(Dataset):
 
 #@def function returns a loaded image dataloader of the function
 #@param batchsize are the size of the batches
-def load_2dimages(batch_size = 32, task = "rotate"):
+def load_2dimages(batch_size = 32, train_split = .95, task = "rotate"):
     #transform the images 
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -78,16 +78,21 @@ def load_2dimages(batch_size = 32, task = "rotate"):
     image_dataset = Retinal2dDataset(preds_file="/home/caleb/school/deep_learning/self-supervised-medical/dataset/2d/train.csv", 
         image_dir= "/home/caleb/school/deep_learning/self-supervised-medical/dataset/2d/train_images", transform=transform, task=task)
 
-    train_size = int(0.85 * len(image_dataset))
-    val_size = len(image_dataset) - train_size
 
-    
-    train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
+    if task == "finetune":
+        return image_dataset
 
-    # Create DataLoaders for both training and validation
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    else:
+        train_size = int(train_split * len(image_dataset))
+        val_size = len(image_dataset) - train_size
+
+        
+        train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
+
+        # Create DataLoaders for both training and validation
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
 
-    return train_loader, val_loader
+        return train_loader, val_loader
 
