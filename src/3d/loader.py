@@ -91,6 +91,18 @@ class PancreasDataset(Dataset):
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx]
     
+def dice_score(preds, targets, num_classes=3):
+    preds = torch.argmax(preds, dim=1)  # [B, D, H, W]
+    dice = 0.0
+    eps = 1e-6
+    for cls in range(1, num_classes):  # skip background
+        pred_cls = (preds == cls).float()
+        target_cls = (targets == cls).float()
+        intersection = (pred_cls * target_cls).sum()
+        union = pred_cls.sum() + target_cls.sum()
+        dice += (2 * intersection + eps) / (union + eps)
+    return dice / (num_classes - 1)
+    
 def run_rotation():
 
     # Loss function
@@ -116,10 +128,10 @@ def run_rotation():
 
 def run_rpl():
 
-    # Loss function
+    # loss function
     loss = torch.nn.CrossEntropyLoss()
 
-    # Pretext 
+    # pretext 
     dataset = PancreasPretextDataset(rpl_preprocess)
     encoder = UNet3dEncoder(2)
     classifier = MulticlassClassifier(1024, 26)  # 26 relative positions 
@@ -128,11 +140,11 @@ def run_rpl():
     preds = classifier(encoder(x)[0])
     print(f"RPL Loss (Pretext): {loss(preds, y)}")
 
-    # Finetune
+    # finetune
     dataset = PancreasDataset()
     decoder = UNet3dDecoder(3)
 
-    # Convert encoder to accept 1-channel input (required for real CT data)
+    # convert encoder to accept 1-channel input (required for real ct data)
     finetune_encoder = UNet3dEncoder(1)
     pretext_state_dict = encoder.state_dict()
     pretext_state_dict = {k: v for k, v in pretext_state_dict.items() if "layers.0.conv1.weight" not in k}
@@ -142,8 +154,10 @@ def run_rpl():
 
     x, y = dataset[:3]
     preds = model(x)
-    print(f"RPL Loss (Finetuned): {loss(preds, y)}") # TODO: use dice score
+    print(f"RPL Loss (Finetuned): {loss(preds, y)}") 
 
+    dice = dice_score(preds, y)
+    print(f"RPL Dice Score (Finetuned): {dice:.4f}")
 
 if __name__ == "__main__":
 
