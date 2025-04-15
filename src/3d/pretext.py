@@ -116,7 +116,7 @@ def rpl_preprocess(data, grid_size=3, patch_size=(32, 32, 32)):
         step = [vol_shape[i] // grid_size for i in range(3)]
 
         # random jitter (up to ±step//4 in each direction)
-        jitter_range = [s // 4 for s in step]
+        jitter_range = [s // 4 for s in step] # maybe change to jitter_range = [3, 3, 3]??? 3 voxels matches the paper exactly 
 
         patches = []
         centers = []

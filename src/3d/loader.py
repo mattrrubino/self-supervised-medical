@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import Dataset
 
 from model import MulticlassClassifier, UNet3d, UNet3dEncoder, UNet3dDecoder
-from pretext import x_preprocess, xy_preprocess, rotation_preprocess
+from pretext import x_preprocess, xy_preprocess, rotation_preprocess, rpl_preprocess
 
 
 # Pancreas dataset constants
@@ -103,7 +103,7 @@ def run_rotation():
 
     x, y = dataset[:3]
     preds = classifier(encoder(x)[0])
-    print(f"Loss: {loss(preds, y)}")
+    print(f"Rotation Loss (Pretext): {loss(preds, y)}")
 
     # Finetune
     dataset = PancreasDataset()
@@ -112,22 +112,21 @@ def run_rotation():
 
     x, y = dataset[:3]
     preds = model(x)
-    print(f"Loss: {loss(preds, y)}") # TODO: use dice score
+    print(f"Rotation Loss (Finetuned): {loss(preds, y)}") # TODO: use dice score
 
 def run_rpl():
 
     # Loss function
     loss = torch.nn.CrossEntropyLoss()
 
-    # Pretext using 3D-RPL
-    from pretext import rpl_preprocess
+    # Pretext
     dataset = PancreasPretextDataset(rpl_preprocess)
-    encoder = UNet3dEncoder(1)
-    classifier = MulticlassClassifier(4**3*1024, 26)  # 26 relative positions in 3x3x3 grid (excluding center)
+    encoder = UNet3dEncoder(2)
+    classifier = MulticlassClassifier(1024, 26)  # 26 relative positions 
 
     x, y = dataset[:3]
     preds = classifier(encoder(x)[0])
-    print(f"Loss: {loss(preds, y)}")
+    print(f"RPL Loss (Pretext): {loss(preds, y)}")
 
 
 if __name__ == "__main__":
