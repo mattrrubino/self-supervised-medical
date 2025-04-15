@@ -7,7 +7,7 @@ from PIL import Image
 
 parent_dir = os.path.abspath("..")
 sys.path.append(parent_dir)
-from pretext_2d import preprocess_image
+from pretext_2d import jigsawify
 
 
 def image_to_tensor(image_path):
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     is_training = True
 
     image_tensor = image_to_tensor(image_path)
-    patches, label = preprocess_image(image_tensor,is_training, num_patches, jitter, permutation)
+    patches, label = jigsawify(image_tensor,is_training, num_patches, jitter, permutation)
     print("label: ", label)
     reform_image(patches, output_path)
     

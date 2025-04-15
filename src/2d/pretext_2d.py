@@ -23,7 +23,7 @@ def rotate_2dimages(image):
 
 
 
-def preprocess_image(image, is_training, patches_per_side, patch_jitter, permutations):
+def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
     overlap_mode = False
     c, h, w = image.shape
 
