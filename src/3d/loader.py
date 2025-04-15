@@ -119,7 +119,7 @@ def run_rpl():
     # Loss function
     loss = torch.nn.CrossEntropyLoss()
 
-    # Pretext
+    # Pretext 
     dataset = PancreasPretextDataset(rpl_preprocess)
     encoder = UNet3dEncoder(2)
     classifier = MulticlassClassifier(1024, 26)  # 26 relative positions 
@@ -127,6 +127,22 @@ def run_rpl():
     x, y = dataset[:3]
     preds = classifier(encoder(x)[0])
     print(f"RPL Loss (Pretext): {loss(preds, y)}")
+
+    # Finetune
+    dataset = PancreasDataset()
+    decoder = UNet3dDecoder(3)
+
+    # Convert encoder to accept 1-channel input (required for real CT data)
+    finetune_encoder = UNet3dEncoder(1)
+    pretext_state_dict = encoder.state_dict()
+    pretext_state_dict = {k: v for k, v in pretext_state_dict.items() if "layers.0.conv1.weight" not in k}
+    finetune_encoder.load_state_dict(pretext_state_dict, strict=False)
+
+    model = UNet3d(finetune_encoder, decoder)
+
+    x, y = dataset[:3]
+    preds = model(x)
+    print(f"RPL Loss (Finetuned): {loss(preds, y)}") # TODO: use dice score
 
 
 if __name__ == "__main__":
