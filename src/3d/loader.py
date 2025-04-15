@@ -90,13 +90,13 @@ class PancreasDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx]
+    
+def run_rotation():
 
-
-if __name__ == "__main__":
     # Loss function
     loss = torch.nn.CrossEntropyLoss()
 
-    # Pretext
+    # Pretext 
     dataset = PancreasPretextDataset(rotation_preprocess)
     encoder = UNet3dEncoder(1)
     classifier = MulticlassClassifier(4**3*1024, 10)
@@ -112,5 +112,29 @@ if __name__ == "__main__":
 
     x, y = dataset[:3]
     preds = model(x)
-    print(f"Loss: {loss(preds, y)}") # TODO: Use dice score
+    print(f"Loss: {loss(preds, y)}") # TODO: use dice score
+
+def run_rpl():
+
+    # Loss function
+    loss = torch.nn.CrossEntropyLoss()
+
+    # Pretext using 3D-RPL
+    from pretext import rpl_preprocess
+    dataset = PancreasPretextDataset(rpl_preprocess)
+    encoder = UNet3dEncoder(1)
+    classifier = MulticlassClassifier(4**3*1024, 26)  # 26 relative positions in 3x3x3 grid (excluding center)
+
+    x, y = dataset[:3]
+    preds = classifier(encoder(x)[0])
+    print(f"Loss: {loss(preds, y)}")
+
+
+if __name__ == "__main__":
+
+    run_rotation()
+
+    run_rpl()
+
+
 
