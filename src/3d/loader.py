@@ -91,6 +91,8 @@ class PancreasDataset(Dataset):
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx]
     
+# averages dice over foreground classes
+# ignores class 0, which is the background class
 def dice_score(preds, targets, num_classes=3):
     preds = torch.argmax(preds, dim=1)  # [B, D, H, W]
     dice = 0.0
