@@ -40,13 +40,15 @@ def crop(data: np.ndarray, normalize: bool = True, threshold: float = 0.05) -> n
 
 
 # Operates on a single input-output pair
-def xy_preprocess(x: np.ndarray, y: np.ndarray, resolution=(128,128,128)) -> tuple[np.ndarray, np.ndarray]:
+def xy_preprocess(x: np.ndarray, y: np.ndarray, resolution=(128,128,128), C=3) -> tuple[np.ndarray, np.ndarray]:
     # Resize with interpolation
-    out_x = skTrans.resize(x, resolution, order=1, preserve_range=True)
-    out_y = skTrans.resize(y, resolution, order=1, preserve_range=True)
+    out_x = skTrans.resize(x, resolution, order=1, preserve_range=True).astype(float)
+    out_y = skTrans.resize(y, resolution, order=1, preserve_range=True).astype(int)
 
-    # Add channel dimension (grayscale)
+    # Add channel dimension
     out_x = np.expand_dims(out_x, axis=0)
+    out_y = out_y - out_y.min()
+    out_y = np.eye(C, dtype=int)[out_y].transpose(3, 0, 1, 2)
 
     # Normalize
     out_x = (out_x - out_x.min()) / (out_x.max() - out_x.min())
@@ -60,7 +62,7 @@ def x_preprocess(x: np.ndarray, resolution=(128,128,128)) -> np.ndarray:
     cropped_x = crop(x)
 
     # Resize with interpolation
-    out_x = skTrans.resize(cropped_x, resolution, order=1, preserve_range=True)
+    out_x = skTrans.resize(cropped_x, resolution, order=1, preserve_range=True).astype(float)
 
     # Add channel dimension (grayscale)
     out_x = np.expand_dims(out_x, axis=0)
@@ -103,6 +105,7 @@ def rotation_preprocess(data):
     else:
         x_rot, y_rot = rotate(data)
     return x_rot.float(), y_rot.long()
+
 
 def rpl_preprocess(data, grid_size=3, patch_size=(32, 32, 32)):
     
