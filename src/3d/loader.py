@@ -121,33 +121,45 @@ def run_rotation():
 
 
 def run_rpl():
-    encoder, _, model = create_unet3d()
-    classifier = create_classification_head(encoder, 26) # 26 relative position
+    # pretext
+    encoder_pretext, _, _ = create_unet3d(filters_in=2)  # rpl uses 2-channel input
+    classifier = create_classification_head(encoder_pretext, 26, data_dim=32)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = model.to(device)
     classifier = classifier.to(device)
 
-    # pretext 
+    # pretext training
     dataset = PancreasPretextDataset(rpl_preprocess)
-    loss = torch.nn.CrossEntropyLoss()
+    loss_fn = torch.nn.CrossEntropyLoss()
     x, y = dataset[:2]
     x = x.to(device)
     y = y.to(device)
     preds = classifier(x)
-    print(f"RPL Loss: {loss(preds, y)}")
+    print(f"RPL Loss: {loss_fn(preds, y)}")
 
-    # finetune
+    # note: for pretext -> finetune use two encoders with different 
+    # input channels but shared weights (excluding conv1)
+    # see "processing multimodal inputs" section of paper
+
+    # create fresh encoder that accepts real ct (1-channel)
+    encoder_finetune, decoder_finetune, model = create_unet3d(filters_in=1)
+
+    # load compatible weights from pretext encoder
+    state_dict_pretext = encoder_pretext.state_dict()
+    filtered_state_dict = {k: v for k, v in state_dict_pretext.items() if "layers.0.conv1.weight" not in k} # first conv has different in_channels
+    encoder_finetune.load_state_dict(filtered_state_dict, strict=False)
+
+    # finetune 
+    model = model.to(device)
     dataset = PancreasDataset()
-    loss = weighted_dice_loss
     x, y = dataset[:2]
     x = x.to(device)
     y = y.to(device)
+    loss = weighted_dice_loss
     preds = model(x)
-    print(f"Segmentation Loss: {loss(preds, y)}") 
+    print(f"Segmentation Loss: {loss(preds, y)}")
 
 
 if __name__ == "__main__":
     run_rotation()
-    # run_rpl()
-
+    run_rpl()
