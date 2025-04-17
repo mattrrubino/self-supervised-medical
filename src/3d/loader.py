@@ -139,7 +139,6 @@ def run_rpl():
 
     # note: for pretext -> finetune use two encoders with different 
     # input channels but shared weights (excluding conv1)
-    # see "processing multimodal inputs" section of paper
 
     # create fresh encoder that accepts real ct (1-channel)
     encoder_finetune, decoder_finetune, model = create_unet3d(filters_in=1)
