@@ -16,10 +16,9 @@ from pretext import x_preprocess, xy_preprocess, rotation_preprocess, rpl_prepro
 PANCREAS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "Task07_Pancreas")
 PANCREAS_IMAGES_TR = [os.path.join(PANCREAS_PATH, "imagesTr", x) for x in os.listdir(os.path.join(PANCREAS_PATH, "imagesTr")) if not x.startswith(".")]
 PANCREAS_LABELS_TR = [os.path.join(PANCREAS_PATH, "labelsTr", x) for x in os.listdir(os.path.join(PANCREAS_PATH, "labelsTr")) if not x.startswith(".")]
-PANCREAS_IMAGES_TS = [os.path.join(PANCREAS_PATH, "imagesTs", x) for x in os.listdir(os.path.join(PANCREAS_PATH, "imagesTs")) if not x.startswith(".")]
 
 # Pancreas dataset cache
-PANCREAS_IMAGES_PRE = PANCREAS_IMAGES_TR + PANCREAS_IMAGES_TS
+PANCREAS_IMAGES_PRE = PANCREAS_IMAGES_TR
 PANCREAS_IMAGES_PRE_CACHE = os.path.join(PANCREAS_PATH, ".imagesPre.npy")
 PANCREAS_IMAGES_DOWN = PANCREAS_IMAGES_TR
 PANCREAS_IMAGES_DOWN_CACHE = os.path.join(PANCREAS_PATH, ".imagesDown.npy")

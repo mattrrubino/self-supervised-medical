@@ -29,7 +29,7 @@ class MulticlassClassifier(nn.Module):
 
 
 class Conv3dBlock(nn.Module):
-    def __init__(self, filters_in, filters_out, kernel_size=3, padding="same", dropout=0.3):
+    def __init__(self, filters_in, filters_out, kernel_size=3, padding="same", dropout=0.0):#0.3):
         super().__init__()
         self.filters_in = filters_in
         self.filters_out = filters_out

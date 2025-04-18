@@ -5,7 +5,7 @@ import skimage.transform as skTrans
 import torch
 
 # Operates on a single input
-def crop(data: np.ndarray, normalize: bool = True, threshold: float = 0.05) -> np.ndarray:
+def crop(data: np.ndarray, normalize: bool = True, threshold: float = 0.05) -> tuple[np.ndarray, tuple[int,int,int,int,int,int]]:
     if normalize:
         data = (data - data.min()) / (data.max() - data.min())
 
@@ -36,18 +36,21 @@ def crop(data: np.ndarray, normalize: bool = True, threshold: float = 0.05) -> n
             ez = z
             break
 
-    return data[sx:ex,sy:ey,sz:ez]
+    return data[sx:ex,sy:ey,sz:ez], (sx,ex,sy,ey,sz,ez)
 
 
 # Operates on a single input-output pair
 def xy_preprocess(x: np.ndarray, y: np.ndarray, resolution=(128,128,128), C=3) -> tuple[np.ndarray, np.ndarray]:
+    # Crop to bounding box
+    cropped_x, (sx,ex,sy,ey,sz,ez) = crop(x)
+    cropped_y = y[sx:ex,sy:ey,sz:ez]
+
     # Resize with interpolation
-    out_x = skTrans.resize(x, resolution, order=1, preserve_range=True).astype(float)
-    out_y = skTrans.resize(y, resolution, order=1, preserve_range=True).astype(int)
+    out_x = skTrans.resize(cropped_x, resolution, order=1, preserve_range=True).astype(float)
+    out_y = np.rint(skTrans.resize(cropped_y, resolution, order=1, preserve_range=True)).astype(int)
 
     # Add channel dimension
     out_x = np.expand_dims(out_x, axis=0)
-    out_y = out_y - out_y.min()
     out_y = np.eye(C, dtype=int)[out_y].transpose(3, 0, 1, 2)
 
     # Normalize
@@ -59,12 +62,12 @@ def xy_preprocess(x: np.ndarray, y: np.ndarray, resolution=(128,128,128), C=3) -
 # Operates on a single input
 def x_preprocess(x: np.ndarray, resolution=(128,128,128)) -> np.ndarray:
     # Crop to bounding box
-    cropped_x = crop(x)
+    cropped_x, _ = crop(x)
 
     # Resize with interpolation
     out_x = skTrans.resize(cropped_x, resolution, order=1, preserve_range=True).astype(float)
 
-    # Add channel dimension (grayscale)
+    # Add channel dimension
     out_x = np.expand_dims(out_x, axis=0)
 
     # Normalize
