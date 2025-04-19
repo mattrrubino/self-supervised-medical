@@ -14,10 +14,9 @@ def batch_text(epoch, i, n, l, m):
     return f"[EPOCH {epoch}] BATCH {i:02}/{n}: - loss {l:08.7f} - {metric_text}"
 
 
-def epoch_text(epoch, lt, mt, lv, mv):
-    metric_t_text = " - t_".join(f"{k} {v:05.4f}" for k, v in sorted(mt.items()))
-    metric_v_text = " - v_".join(f"{k} {v:05.4f}" for k, v in sorted(mv.items()))
-    return f"[EPOCH {epoch}] - t_loss {lt:05.4f} - t_{metric_t_text} - v_loss {lv:05.4f} - v_{metric_v_text}"
+def epoch_text(epoch, prefix, l, m):
+    metric_text = " - ".join(f"{k} {v:08.7f}" for k, v in sorted(m.items()))
+    return f"[EPOCH {epoch}] {prefix}: - loss {l:08.7f} - {metric_text}"
 
 
 def compute_metrics(preds, y):
@@ -83,7 +82,8 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
 
         sys.stdout.write("\r"+" "*120+"\r")
         sys.stdout.flush()
-        print(epoch_text(epoch, train_loss, average_metrics(mt), validation_loss, mv))
+        print(epoch_text(epoch, "TRAIN", train_loss, average_metrics(mt)))
+        print(epoch_text(epoch, "VALID", validation_loss, mv))
 
 
 def validate(model, val_dataloader, criterion, device):
