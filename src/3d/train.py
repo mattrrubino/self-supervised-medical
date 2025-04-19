@@ -36,7 +36,8 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
             optimizer.zero_grad()
             
             outputs = model(inputs)
-            if task == "rotate":
+            # if task == "rotate":
+            if task in ["rotate", "rpl"]:
                 labels = torch.argmax(labels, dim=1)
                 labels = labels.squeeze()
             loss = criterion(outputs, labels)
@@ -93,7 +94,8 @@ def validate(model, val_dataloader, criterion, epoch, num_epochs, device, task):
         labels = labels.to(device)
         outputs = model(inputs)
         
-        if task == "rotate":
+        # if task == "rotate":
+        if task in ["rotate", "rpl"]:
             labels = torch.argmax(labels, dim=1)
             labels = labels.squeeze()
         loss = criterion(outputs, labels)

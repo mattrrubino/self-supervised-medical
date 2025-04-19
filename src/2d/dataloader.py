@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 import pandas as pd
 import os 
-from pretext_2d import rotate_2dimages
+from pretext_2d import rotate_2dimages, rotate_2dimages, rplify
 from torch.utils.data import random_split
 
 
@@ -30,69 +30,74 @@ class Retinal2dDataset(Dataset):
         self.images = []
         self.rotated_labels = []
 
-        self.preprocess()
+        self.rpl_pairs = []
+        self.rpl_labels = []
 
+        self.preprocess()
 
     def __len__(self):
         return len(self.image_paths)
 
-    #def preprocess transforms all the images and applies the nesseccary pre-text task
+
     def preprocess(self):
         for image_name in self.image_paths:
             img_name = os.path.join(self.image_dir, image_name)
             image = Image.open(img_name)
-            
+
             if self.task == "rotate":
                 image, rotation_label = rotate_2dimages(image)
+                if self.transform:
+                    image = self.transform(image)
+                self.images.append(image)
                 self.rotated_labels.append(rotation_label)
-            if self.transform:
-                image = self.transform(image)
-            
-            self.images.append(image)
-            
-            
-            
 
+            elif self.task == "rpl":
+                x_pair, rel_label = rplify(image)
+                self.rpl_pairs.append(x_pair)
+                self.rpl_labels.append(rel_label)
+
+            elif self.task == "finetune":
+                if self.transform:
+                    image = self.transform(image)
+                self.images.append(image)
+
+    #     return img, label
     def __getitem__(self, idx):
-        img = self.images[idx]
-        label = None
-        if self.task == "rotate":
-            label = self.rotated_labels[idx]
-        
-        #we want the actual labels for the finetune task
-        if self.task == "finetune":
-            label = self.labels[idx]
-
-        return img, label
+        if self.task == "rpl":
+            return self.rpl_pairs[idx], self.rpl_labels[idx]
+        elif self.task == "rotate":
+            return self.images[idx], self.rotated_labels[idx]
+        elif self.task == "finetune":
+            return self.images[idx], self.labels[idx]
 
 
-#@def function returns a loaded image dataloader of the function
-#@param batchsize are the size of the batches
 def load_2dimages(batch_size = 32, train_split = .95, task = "rotate"):
-    #transform the images 
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-    ])
 
-    image_dataset = Retinal2dDataset(preds_file="/home/caleb/school/deep_learning/self-supervised-medical/dataset/2d/train.csv", 
-        image_dir= "/home/caleb/school/deep_learning/self-supervised-medical/dataset/2d/train_images", transform=transform, task=task)
+    # Only use transform for rotate and finetune
+    transform = None
+    if task in ["rotate", "finetune"]:
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+        ])
 
+    image_dataset = Retinal2dDataset(
+        preds_file="/Users/aspensmith/Desktop/self-supervised-medical/src/2d/dataset/train.csv", 
+        image_dir="/Users/aspensmith/Desktop/self-supervised-medical/src/2d/train_images", 
+        transform=transform,
+        task=task
+    )
 
     if task == "finetune":
         return image_dataset
 
-    else:
-        train_size = int(train_split * len(image_dataset))
-        val_size = len(image_dataset) - train_size
+    train_size = int(train_split * len(image_dataset))
+    val_size = len(image_dataset) - train_size
 
-        
-        train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
+    train_dataset, val_dataset = random_split(image_dataset, [train_size, val_size])
 
-        # Create DataLoaders for both training and validation
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-
-        return train_loader, val_loader
+    return train_loader, val_loader
 
