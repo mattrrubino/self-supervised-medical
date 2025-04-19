@@ -18,5 +18,5 @@ def weighted_dice_per_class(preds: np.ndarray, y: np.ndarray, cls: int, smooth=0
 
 
 def weighted_dice_loss(preds: np.ndarray, y: np.ndarray):
-    return - weighted_dice(preds, y)
+    return 1 - weighted_dice(preds, y)
 
