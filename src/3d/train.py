@@ -20,14 +20,23 @@ from model import create_unet3d
 #@param device is the device to use
 def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, device, fold=None):
     model.train()
+
+    # Freeze the encoder
+    # for param in model.encoder.parameters():
+        # param.requires_grad = False
     
     for epoch in range(num_epochs):
+        # Unfreeze the encoder
+        if epoch == 25:
+            for param in model.encoder.parameters():
+                param.requires_grad = True
+
         running_loss = 0
         background_dice = 0
         pancreas_dice = 0
         tumor_dice = 0
 
-        for x, y in train_dataloader:
+        for i, (x, y) in enumerate(train_dataloader):
             x = x.to(device)
             y = y.to(device)
 
@@ -35,12 +44,22 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
             preds = model(x)
             loss = criterion(preds, y)
             loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
+            torch.nn.utils.clip_grad_value_(model.parameters(), 1)
             optimizer.step()
 
-            running_loss += loss.item()
-            background_dice += weighted_dice_per_class(preds, y, 0).item()
-            pancreas_dice += weighted_dice_per_class(preds, y, 1).item()
-            tumor_dice += weighted_dice_per_class(preds, y, 2).item()
+            l = loss.item()
+            bg = weighted_dice_per_class(preds, y, 0).item()
+            pan = weighted_dice_per_class(preds, y, 1).item()
+            tum = weighted_dice_per_class(preds, y, 2).item()
+
+            running_loss += l
+            background_dice += bg
+            pancreas_dice += pan
+            tumor_dice += tum
+            print(f"{i+1}/{len(train_dataloader)} - loss: {l} - bg: {bg} - pan: {pan} - tum: {tum}")
+
         running_loss /= len(train_dataloader)
         background_dice /= len(train_dataloader)
         pancreas_dice /= len(train_dataloader)
@@ -70,15 +89,17 @@ def validate(model, val_dataloader, criterion, epoch, num_epochs, device):
     model.eval()
     running_loss = 0
     
-    for inputs, labels in val_dataloader:
-        inputs = inputs.to(device)
-        labels = labels.to(device)
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        running_loss += loss.item()
+    with torch.no_grad():
+        for inputs, labels in val_dataloader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            running_loss += loss.item()
     
     running_loss /= len(val_dataloader)
     print(f'Epoch {epoch+1}/{num_epochs}, Validation Loss: {running_loss}')
+    model.train()
 
 
 def main():
@@ -96,17 +117,17 @@ def main():
         train_size = int(len(dataset)*0.95)
         val_size = len(dataset) - train_size
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-        train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True)
-        val_dataloader = DataLoader(val_dataset, batch_size=2, shuffle=False)
+        train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+        val_dataloader = DataLoader(val_dataset, batch_size=4, shuffle=False)
         # lr = 0.00001
-        lr = 0.01
+        lr = 0.001
         criterion = weighted_dice_loss
     else:
         print(f"Unknown task: {task}")
         sys.exit(-1)
     
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=lr, eps=1e-7)
     train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, device)
     
 
