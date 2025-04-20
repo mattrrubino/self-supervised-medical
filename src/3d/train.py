@@ -1,12 +1,15 @@
+import json
+import os
 import sys
-import torch
-import torch.optim as optim
-from torch.utils.data import DataLoader
-from torch.utils.data.dataset import random_split
 
-from loader import PancreasDataset, PancreasPretextDataset
-from metrics import weighted_dice, weighted_dice_loss, weighted_dice_per_class
-from model import create_unet3d
+import torch
+
+from metrics import weighted_dice, weighted_dice_per_class
+
+
+RESULTS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "results")
+if not os.path.exists(RESULTS_PATH):
+    os.makedirs(RESULTS_PATH, exist_ok=True)
 
 
 def batch_text(epoch, i, n, l, m):
@@ -41,16 +44,18 @@ def average_metrics(ml):
 #@param criterion is the loss
 #@param task is the pretext task name (or finetune)
 #@param device is the device to use
-def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, device, fold=None):
+def train(train_dataloader, val_dataloader, wu_epochs, num_epochs, model, optimizer, criterion, device, filename):
+    model.to(device)
     model.train()
 
     # Freeze the encoder
     for param in model.encoder.parameters():
         param.requires_grad = False
     
+    json_data = []
     for epoch in range(num_epochs):
         # Unfreeze the encoder
-        if epoch == 25:
+        if epoch == wu_epochs:
             for param in model.encoder.parameters():
                 param.requires_grad = True
 
@@ -78,12 +83,23 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
             sys.stdout.flush()
 
         train_loss /= len(train_dataloader)
+        mt = average_metrics(mt)
         validation_loss, mv = validate(model, val_dataloader, criterion, device)
 
         sys.stdout.write("\r"+" "*120+"\r")
         sys.stdout.flush()
-        print(epoch_text(epoch, "TRAIN", train_loss, average_metrics(mt)))
+        print(epoch_text(epoch, "TRAIN", train_loss, mt))
         print(epoch_text(epoch, "VALID", validation_loss, mv))
+
+        data = {
+            "train_loss": train_loss,
+            **{f"train_{key}": value for key, value in mt.items()},
+            "validation_loss": validation_loss,
+            **{f"validation_{key}": value for key, value in mv.items()},
+        }
+        json_data.append(data)
+        with open(os.path.join(RESULTS_PATH, filename), "w") as f:
+            json.dump(json_data, f)
 
 
 def validate(model, val_dataloader, criterion, device):
@@ -103,37 +119,4 @@ def validate(model, val_dataloader, criterion, device):
     validation_loss /= len(val_dataloader)
     model.train()
     return validation_loss, average_metrics(mv)
-
-
-def main():
-    task = input("What Task are we solving for (rotate, finetune): ")
-    num_epochs = int(input("How many epochs we trying to do (paper recommends 1000 for training for 2D tasks): "))
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print("Using device: " + str(device))
-
-    if task == "rotate":
-        pass # TODO
-    elif task == "finetune":
-        _, _, model = create_unet3d()
-        dataset = PancreasDataset()
-        train_size = int(len(dataset)*0.95)
-        val_size = len(dataset) - train_size
-        train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-        train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-        val_dataloader = DataLoader(val_dataset, batch_size=4, shuffle=False)
-        # lr = 0.00001
-        lr = 0.001
-        criterion = weighted_dice_loss
-    else:
-        print(f"Unknown task: {task}")
-        sys.exit(-1)
-    
-    model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=lr, eps=1e-7)
-    train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, device)
-    
-
-if __name__ == "__main__":
-    main()
 
