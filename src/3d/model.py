@@ -165,7 +165,7 @@ def create_unet3d(filters_in=1, filters_out=3, filters=16, num_layers=4):
 def create_classification_head(encoder, classes, data_dim=128):
     filters = encoder.filters
     num_layers = encoder.num_layers
-    hidden_dim = int((filters*2**num_layers)*((data_dim/(2**num_layers))**3))
+    hidden_dim = int((filters*2**num_layers)*((data_dim/(2**(num_layers+1)))**3))
     head = MulticlassClassifier(hidden_dim, classes)
     classifier = torch.nn.Sequential(encoder, SkipStripper(), head)
     return classifier

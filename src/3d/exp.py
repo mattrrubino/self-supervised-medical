@@ -1,15 +1,18 @@
+import os
+
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import random_split
 
-from loader import PancreasDataset
+from loader import PancreasDataset, PancreasPretextDataset
 from metrics import weighted_dice_loss
-from model import create_unet3d
-from train import train
+from model import create_unet3d, create_classification_head
+from pretext import rotation_preprocess
+from train import train, RESULTS_PATH
 
 
-def run_finetune_experiment(filename, percent_train, percent_val=0.05, wu_epochs=25, num_epochs=400, batch_size=4, model_checkpoint=None):
+def run_finetune_experiment(json_file, percent_train, percent_val=0.05, wu_epochs=25, num_epochs=400, batch_size=4, weight_file=None):
     assert num_epochs >= 1, "Total number of epochs must be greater than or equal to one."
     assert wu_epochs >= 0, "Total number of warmup epochs must be greater than or equal to zero."
     assert num_epochs >= wu_epochs, "Total number of epochs must be greater than or equal to the number of warmup epochs."
@@ -17,8 +20,9 @@ def run_finetune_experiment(filename, percent_train, percent_val=0.05, wu_epochs
     device = "cuda" if torch.cuda.is_available() else "cpu"
     generator = torch.Generator().manual_seed(42)
 
-    _, _, model = create_unet3d()
-    # TODO: Load model from checkpoint if exists
+    encoder, _, model = create_unet3d()
+    if weight_file is not None:
+        encoder.load_state_dict(torch.load(os.path.join(RESULTS_PATH, weight_file)))
 
     dataset = PancreasDataset()
     train_dataset, val_dataset = random_split(dataset, [1-percent_val, percent_val], generator)
@@ -29,16 +33,48 @@ def run_finetune_experiment(filename, percent_train, percent_val=0.05, wu_epochs
     lr = 1e-3
     optimizer = optim.Adam(model.parameters(), lr=lr, eps=1e-7)
     criterion = weighted_dice_loss
-    train(train_dataloader, val_dataloader, wu_epochs, num_epochs, model, optimizer, criterion, device, filename)
+    metrics = ["dice", "dice_0", "dice_1", "dice_2"]
+    train(train_dataloader, val_dataloader, wu_epochs, num_epochs, model, optimizer, criterion, metrics, device, json_file)
 
 
-def run_experiments():
+def run_pretext_experiment(json_file, weight_file, pretext_preprocess, n_classes, criterion, percent_val=0.05, num_epochs=1000, batch_size=4):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    generator = torch.Generator().manual_seed(42)
+
+    encoder, _, _ = create_unet3d()
+    classifier = create_classification_head(encoder, n_classes)
+
+    dataset = PancreasPretextDataset(pretext_preprocess)
+    train_dataset, val_dataset = random_split(dataset, [1-percent_val, percent_val], generator)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+    lr = 1e-3
+    optimizer = optim.Adam(classifier.parameters(), lr=lr, eps=1e-7)
+    metrics = ["accuracy"]
+    train(train_dataloader, val_dataloader, 0, num_epochs, classifier, optimizer, criterion, metrics, device, json_file, weight_file)
+
+
+def run_baseline_experiments():
     for percent in [5, 10, 25, 50, 100]:
-        filename = f"baseline_pancreas_{percent}.json"
+        json_file = f"baseline_pancreas_{percent}.json"
         percent_train = percent/100.0
-        run_finetune_experiment(filename, percent_train)
+        run_finetune_experiment(json_file, percent_train)
+
+
+def run_rotation_experiments():
+    json_file = "rotation_pancreas.json"
+    weight_file = "rotation_pancreas.pth"
+    criterion = torch.nn.CrossEntropyLoss()
+    run_pretext_experiment(json_file, weight_file, rotation_preprocess, 10, criterion)
+
+    for percent in [5, 10, 25, 50, 100]:
+        json_file = f"rotation_pancreas_{percent}.json"
+        percent_train = percent/100.0
+        run_finetune_experiment(json_file, percent_train, weight_file=weight_file)
 
 
 if __name__ == "__main__":
-    run_experiments()
+    # run_baseline_experiments()
+    run_rotation_experiments()
 
