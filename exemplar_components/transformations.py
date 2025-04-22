@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 def apply_3d_transformations(volume):
     """
-    Apply transformations to create a positive sample for the 3D Exemplar Network
+    transformations to create a positive sample for the 3D Exemplar Network
     
-    Following the paper's specifications:
+    paper's specifications:
     - Random flipping along arbitrary axis (50% chance)
     - Random rotation along arbitrary axis (50% chance)
     - Random brightness and contrast (50% chance)
