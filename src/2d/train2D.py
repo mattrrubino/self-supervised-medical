@@ -47,7 +47,7 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
             optimizer.zero_grad()
             
             outputs = model(inputs)
-            if task == "rotate":
+            if task == "rotate" or task == "jigsaw":
                 labels = torch.argmax(labels, dim=1)
                 labels = labels.squeeze()
             loss = criterion(outputs, labels)
@@ -81,7 +81,7 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
 
 
 def metrics(outputs, labels, task, split, epoch=None, num_epochs=None):
-    if task == "rotate":
+    if task == "rotate" or task == "jigsaw":
         f1 = f1_score(labels, outputs, average='macro')
         print(f"F1 {split} Score: {f1}")
     if task == "finetune":
@@ -122,7 +122,7 @@ def validate(model, val_dataloader, criterion, epoch, num_epochs, device, task):
         labels = labels.to(device)
         outputs = model(inputs)
         
-        if task == "rotate":
+        if task == "rotate" or task == "jigsaw":
             labels = torch.argmax(labels, dim=1)
             labels = labels.squeeze()
         loss = criterion(outputs, labels)
@@ -147,25 +147,29 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-    task = input("What Task are we solving for (rotate): ")
-    num_epochs = int(input("How many epochs we trying to do (paper recomends 1000 for training for 2D tasks): "))
+    task = input("What Task are we solving for (rotate, jigsaw): ")
+    num_epochs = int(input("How many epochs we trying to do (Reccomend around 15-25 for training for 2D tasks): "))
 
     print("Using device: " + str(device))
+     
+    print("preprocessing images, this might take a moment ...")
+    #permuation is only used for the jigaw task will not be used for the other tasks
+    train_dataloader, val_dataloader, permuation = load_2dimages(task=task)
+    print("preprocessing done, begining training ...")
 
+    
     if task == "rotate":
         #We are predicting four classes for the densenet rotation
         model.classifier = torch.nn.Linear(model.classifier.in_features, 4)
+
+    if task == "jigsaw":
+        model.classifier = torch.nn.Linear(model.classifier.in_features, len(permuation))
+
     
     model.to(device)
-
     optimizer = optim.Adam(model.parameters(), lr=0.0005)
-
     criterion = nn.CrossEntropyLoss()
-    
-    print("preprocessing images, this might take a moment ...")
-    train_dataloader, val_dataloader = load_2dimages()
-    print("preprocessing done, begining training ...")
-
+   
 
     train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, task, device)
     

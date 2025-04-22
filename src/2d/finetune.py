@@ -14,9 +14,8 @@ import random
 def reset_model_weights(pre_task = "rotate", device="cuda"):
     model = models.densenet121(weights=None)
     if pre_task == "rotate":
-        
         checkpoint = torch.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/rotate/checkpoint25.pth")
-        
+    
         #only used for helping with shape requirments while loading
         model.classifier = torch.nn.Linear(model.classifier.in_features, 4)
         
@@ -24,6 +23,19 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
         model.load_state_dict(checkpoint["model_state_dict"])
 
         model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
+
+    if pre_task == "jigsaw":
+        print("loading jigsaw checkpoint")
+        checkpoint = torch.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/jigsaw/checkpoint499.pth")
+        
+        ###CHANGE THIS IF YOU CHANGE THE PURMUATION
+        model.classifier = torch.nn.Linear(model.classifier.in_features, 16)
+        
+        #load everything except the pretrained classifier
+        model.load_state_dict(checkpoint["model_state_dict"])
+
+        model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
+
 
     model.to(device)
 
@@ -39,7 +51,7 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
 
 
 def main():
-    pre_task = input("What task are we finetuning for (rotate): ")
+    pre_task = input("What task are we finetuning for (rotate, jigsaw): ")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Using device: " + str(device))
     
@@ -65,6 +77,7 @@ def main():
             
         mean_kappa_scores = 0
         for fold, (train_ids, val_ids) in enumerate(kfold.split(dataset)):
+            
             #reset the model for each fold
             if fold != 0:
                 model, optimzer, criterion  = reset_model_weights(pre_task)
