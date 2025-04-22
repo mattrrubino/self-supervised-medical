@@ -10,6 +10,7 @@ from metrics import weighted_dice, weighted_dice_per_class
 RESULTS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "results")
 if not os.path.exists(RESULTS_PATH):
     os.makedirs(RESULTS_PATH, exist_ok=True)
+EPSILON = 1e-4
 
 
 def batch_text(epoch, i, n, l, m):
@@ -96,7 +97,7 @@ def train(train_dataloader, val_dataloader, wu_epochs, num_epochs, model, optimi
             with open(os.path.join(RESULTS_PATH, json_file), "w") as f:
                 json.dump(json_data, f)
 
-        if weight_file is not None and validation_loss < min_validation_loss:
+        if weight_file is not None and validation_loss - min_validation_loss < EPSILON:
             min_validation_loss = validation_loss
             torch.save(encoder.state_dict(), os.path.join(RESULTS_PATH, weight_file))
 

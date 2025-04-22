@@ -11,6 +11,7 @@ from train import RESULTS_PATH
 GRAPHS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "graphs")
 if not os.path.exists(GRAPHS_PATH):
     os.makedirs(GRAPHS_PATH, exist_ok=True)
+TASKS = ["baseline", "rotation"]
 
 
 def smooth(y, count=10):
@@ -20,16 +21,18 @@ def smooth(y, count=10):
 def create_train_graph():
     results = [x for x in os.listdir(RESULTS_PATH) if "baseline_pancreas" in x]
     x = sorted([int(re.match(r"baseline_pancreas_(\d+).json", x).group(1)) for x in results]) # pyright: ignore
-    y = []
-    for percent in x:
-        filepath = os.path.join(RESULTS_PATH, f"baseline_pancreas_{percent}.json")
-        with open(filepath) as f:
-            data = json.load(f)
-        dice = max([x["validation_dice"] for x in data])
-        y.append(dice)
 
     plt.figure(figsize=(15, 10))
-    plt.plot(x, y, label="baseline", marker="o")
+    for task in TASKS:
+        y = []
+        for percent in x:
+            filepath = os.path.join(RESULTS_PATH, f"{task}_pancreas_{percent}.json")
+            with open(filepath) as f:
+                data = json.load(f)
+            dice = sum([x["validation_dice"] for x in data]) / len(data)
+            y.append(dice)
+        plt.plot(x, y, label=task, marker="o")
+
     plt.xticks(x)
     plt.grid()
     plt.xlabel("Percentage of Labeled Images", fontweight="bold")
@@ -39,13 +42,14 @@ def create_train_graph():
 
 
 def create_epoch_graph():
-    filepath = os.path.join(RESULTS_PATH, "baseline_pancreas_100.json")
-    with open(filepath) as f:
-        data = json.load(f)
-    x, y = smooth([d["validation_dice"] for d in data])
-
     plt.figure(figsize=(15, 10))
-    plt.plot(x, y, label="baseline", marker="o")
+    for task in TASKS:
+        filepath = os.path.join(RESULTS_PATH, f"{task}_pancreas_100.json")
+        with open(filepath) as f:
+            data = json.load(f)
+        x, y = smooth([d["validation_dice"] for d in data])
+        plt.plot(x, y, label=task, marker="o")
+
     plt.grid()
     plt.xlabel("Epochs", fontweight="bold")
     plt.ylabel("Average Dice Score", fontweight="bold")
