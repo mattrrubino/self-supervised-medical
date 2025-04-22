@@ -15,7 +15,7 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
     model = models.densenet121(weights=None)
     if pre_task == "rotate":
         
-        checkpoint = torch.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/rotate/checkpoint50.pth")
+        checkpoint = torch.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/rotate/checkpoint25.pth")
         
         #only used for helping with shape requirments while loading
         model.classifier = torch.nn.Linear(model.classifier.in_features, 4)
@@ -53,18 +53,29 @@ def main():
     print("preprocessing done, begining training ...")
 
     
-    training_percent = np.array([0.05, 0.10, 0.20, 0.50, 1.00])
+    training_percent = np.array([0.05, 0.10, 0.25, 0.50, 1.00])
     all_kappa_scores = np.zeros(len(training_percent))
     for i in range(0, len(training_percent)):
+        print("Data percent: " + str(training_percent[i] * 100) + "%")
+        print('--------------------------------')
+        
         if(i != 0):
             #we need to reset the model weights after testing on the previous training percent
             model, optimzer, criterion  = reset_model_weights(pre_task)
             
         mean_kappa_scores = 0
         for fold, (train_ids, val_ids) in enumerate(kfold.split(dataset)):
+            #reset the model for each fold
+            if fold != 0:
+                model, optimzer, criterion  = reset_model_weights(pre_task)
+            
             print(f'\nFOLD {fold + 1}')
             print('--------------------------------')
             
+            #since we are doing a kfold with warmup, we need to freeze the weights
+            #back just to be safe
+            
+        
             train_pool = list(train_ids)
     
             # Sample only a percent of the training depending on the training_percent
@@ -79,14 +90,18 @@ def main():
             train_dataloader = DataLoader(train_subsampler, batch_size=32, shuffle=True)
             val_dataloader = DataLoader(val_subsampler, batch_size=32, shuffle=True)
             
-            kappa_score = train(train_dataloader, val_dataloader, 20, model, optimzer, criterion, task, device, fold)
+            #save for last fold
+            if fold == 4:
+                kappa_score = train(train_dataloader, val_dataloader, 20, model, optimzer, criterion, task, device, fold, training_percent[i])
+            else:
+                kappa_score = train(train_dataloader, val_dataloader, 20, model, optimzer, criterion, task, device)
             mean_kappa_scores += kappa_score
     
 
         mean_kappa_scores = mean_kappa_scores / 5
         all_kappa_scores[i] = mean_kappa_scores
     
-    np.save("kappa_scores_" + pre_task + ".npy", mean_kappa_scores)
+    np.save("kappa_scores_" + pre_task + ".npy", all_kappa_scores)
     print(all_kappa_scores.shape)
     print(training_percent.shape)
     plot_kappa(all_kappa_scores, training_percent)

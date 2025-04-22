@@ -6,7 +6,7 @@ import pandas as pd
 import os 
 from pretext_2d import rotate_2dimages
 from torch.utils.data import random_split
-
+from torchvision.transforms.functional import to_pil_image, to_tensor
 
 #custom dataset class to load the training 
 class Retinal2dDataset(Dataset):
@@ -42,9 +42,9 @@ class Retinal2dDataset(Dataset):
             img_name = os.path.join(self.image_dir, image_name)
             image = Image.open(img_name)
             
-            if self.task == "rotate":
-                image, rotation_label = rotate_2dimages(image)
-                self.rotated_labels.append(rotation_label)
+            # if self.task == "rotate":
+            #     image, rotation_label = rotate_2dimages(image)
+            #     self.rotated_labels.append(rotation_label)
             if self.transform:
                 image = self.transform(image)
             
@@ -56,12 +56,18 @@ class Retinal2dDataset(Dataset):
     def __getitem__(self, idx):
         img = self.images[idx]
         label = None
+
         if self.task == "rotate":
-            label = self.rotated_labels[idx]
+            img = to_pil_image(img)
+            img, label = rotate_2dimages(img)
+            img = to_tensor(img)
+        
         
         #we want the actual labels for the finetune task
         if self.task == "finetune":
             label = self.labels[idx]
+
+        
 
         return img, label
 
