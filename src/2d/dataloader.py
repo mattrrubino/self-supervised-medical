@@ -31,7 +31,7 @@ class Retinal2dDataset(Dataset):
         if task == "jigsaw":
             self.num_patches = 4
             self.jitter = 20
-            self.permutation = list(np.random.permutation(self.num_patches**2))
+            self.permutation = [list(np.random.permutation(self.num_patches**2))]
         
         self.images = []
         self.rotated_labels = []

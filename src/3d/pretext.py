@@ -146,3 +146,53 @@ def rpl_preprocess(data, grid_size=3, patch_size=(32, 32, 32)):
         x_rpl = torch.cat([x_pair[0], x_pair[1]], dim=0).unsqueeze(0)
         y_rpl = y
     return x_rpl.float(), y_rpl.long()
+
+
+
+def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
+    overlap_mode = False
+    c, h, w, d = image.shape
+
+    patch_overlap = 0
+    if patch_jitter < 0: # If we are given a negative patch jitter, we actually want overlapping patches
+        patch_overlap = -patch_jitter
+        overlap_mode = True        
+
+    h_step = (h - patch_overlap)//patches_per_side
+    w_step = (w - patch_overlap)//patches_per_side
+    d_step = (d - patch_overlap)//patches_per_side
+
+    patch_height = h_step - patch_jitter
+    patch_width = w_step - patch_jitter
+    patch_depth = d_step - patch_jitter
+
+
+    patch_arr = []
+    for x in range(patches_per_side):
+        for y in range(patches_per_side):
+            for z in range(patches_per_side):
+                patch = img_crop(image, x*h_step, y*w_step, z*d_step, h_step+patch_overlap, w_step+patch_overlap, d_step+patch_overlap)
+
+                if not overlap_mode: # do jitter
+                    x_patch_start = 0
+                    y_patch_start = 0
+                    z_patch_start = 0
+                    if is_training:
+                        x_patch_start = random.randint(0, patch_jitter)
+                        y_patch_start = random.randint(0, patch_jitter)
+                        z_patch_start = random.randint(0, patch_jitter)
+                    else:
+                        x_patch_start = patch_jitter // 2
+                        y_patch_start = patch_jitter // 2
+                        z_patch_start = patch_jitter // 2
+                    patch = img_crop(patch, x_patch_start, y_patch_start, z_patch_start, patch_height, patch_width, patch_depth)
+                patch_arr.append(patch)
+
+    label = random.randint(0, len(permutations)-1) # permutation label
+    y = np.zeros((len(permutations),)) # one hot permutation label
+    y[label] = 1
+
+    return np.array(patch_arr)[np.array(permutations[label])], np.array(y)
+
+def img_crop(image, x, y, z, h, w, d):
+    return image[:, x:(x+h), y:(y+w), z:(z+d)]
