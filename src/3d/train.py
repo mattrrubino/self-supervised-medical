@@ -1,144 +1,121 @@
+import json
+import os
 import sys
+
 import torch
-import torch.optim as optim
-import torch.nn as nn
-import numpy as np
 
-from loader import PancreasDataset, PancreasPretextDataset
-from metrics import weighted_dice_loss
-from model import MulticlassClassifier, SkipStripper, UNet3dEncoder, UNet3dDecoder, UNet3d
+from metrics import weighted_dice, weighted_dice_per_class
 
 
-#@def trains the model
-#@param train_dataloader is the training dataset
-#@param val_dataloader is the validation dataset
-#@param num_epochs is how many epochs we want to train for
-#@param model is the model we are training
-#@param optimizer is the optimizer we are using
-#@param criterion is the loss
-#@param task is the pretext task name (or finetune)
-#@param device is the device to use
-def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, task, device, fold=None):
+RESULTS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "results")
+if not os.path.exists(RESULTS_PATH):
+    os.makedirs(RESULTS_PATH, exist_ok=True)
+
+
+def batch_text(epoch, i, n, l, m):
+    metric_text = " - ".join(f"{k} {v:08.7f}" for k, v in sorted(m.items()))
+    return f"[EPOCH {epoch}] BATCH {i:02}/{n}: - loss {l:08.7f} - {metric_text}"
+
+
+def epoch_text(epoch, prefix, l, m):
+    metric_text = " - ".join(f"{k} {v:08.7f}" for k, v in sorted(m.items()))
+    return f"[EPOCH {epoch}] {prefix}: - loss {l:08.7f} - {metric_text}"
+
+
+def compute_metrics(preds, y, metrics):
+    op = {
+        "dice": weighted_dice,
+        "dice_0": lambda a, b: weighted_dice_per_class(a, b, 0),
+        "dice_1": lambda a, b: weighted_dice_per_class(a, b, 1),
+        "dice_2": lambda a, b: weighted_dice_per_class(a, b, 2),
+        "accuracy": lambda a, b: (torch.argmax(a, dim=-1) == b).float().mean(),
+    }
+    return {metric: op[metric](preds, y).item() for metric in metrics}
+
+
+def average_metrics(ml):
+    return {key: sum([m[key] for m in ml])/len(ml) for key in ml[0]}
+
+
+def train(train_dataloader, val_dataloader, wu_epochs, num_epochs, model, optimizer, criterion, metrics, device, json_file=None, weight_file=None):
+    model.to(device)
     model.train()
+
+    # Freeze the encoder
+    encoder = model.encoder if hasattr(model, "encoder") else model[0]
+    for param in encoder.parameters():
+        param.requires_grad = False
     
-    #final valdiation score
-    val_score = 0
-    
+    json_data = []
+    min_validation_loss = float("inf")
     for epoch in range(num_epochs):
-        running_loss = 0
+        # Unfreeze the encoder
+        if epoch == wu_epochs:
+            for param in encoder.parameters():
+                param.requires_grad = True
 
-        all_outputs = []
-        all_labels = []
+        train_loss = 0
+        mt = []
+        for i, (x, y) in enumerate(train_dataloader):
+            x = x.to(device)
+            y = y.to(device)
 
-        for inputs, labels in train_dataloader:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
             optimizer.zero_grad()
-            
-            outputs = model(inputs)
-            # if task == "rotate":
-            if task in ["rotate", "rpl"]:
-                labels = torch.argmax(labels, dim=1)
-                labels = labels.squeeze()
-            loss = criterion(outputs, labels)
-            
-            
-            all_labels = all_labels + labels.cpu().tolist()
-            all_outputs = all_outputs + torch.argmax(outputs.detach(), dim=1).cpu().tolist()
-
-            
+            preds = model(x)
+            loss = criterion(preds, y)
             loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
+            torch.nn.utils.clip_grad_value_(model.parameters(), 1)
             optimizer.step()
 
-            running_loss += loss.item()
-        running_loss = running_loss / len(train_dataloader)
-        
-        print(f'Epoch {epoch+1}/{num_epochs}, Loss: {running_loss}')
-        # metrics(all_outputs, all_labels, task, "train")
-        
+            l = loss.item()
+            m = compute_metrics(preds, y, metrics)
+            train_loss += l
+            mt.append(m)
+            sys.stdout.write("\r"+batch_text(epoch+1, i, len(train_dataloader), l, m))
+            sys.stdout.flush()
 
-        val_loss, val_score = validate(model, val_dataloader, criterion, epoch, num_epochs, device, task)
-        if (epoch % 50 == 0  or epoch == num_epochs -1) and epoch != 0:
-            save_checkpoint(model, running_loss, val_loss, epoch, optimizer, task, fold)
-            print(f"Checkpoint saved at epoch {epoch}")
+        train_loss /= len(train_dataloader)
+        mt = average_metrics(mt)
+        validation_loss, mv = validate(model, val_dataloader, criterion, metrics, device)
 
-        
-    if task == "finetune":
-        return val_score
+        sys.stdout.write("\r"+" "*120+"\r")
+        sys.stdout.flush()
+        print(epoch_text(epoch+1, "TRAIN", train_loss, mt))
+        print(epoch_text(epoch+1, "VALID", validation_loss, mv))
+
+        if json_file is not None: 
+            data = {
+                "train_loss": train_loss,
+                **{f"train_{key}": value for key, value in mt.items()},
+                "validation_loss": validation_loss,
+                **{f"validation_{key}": value for key, value in mv.items()},
+            }
+            json_data.append(data)
+            with open(os.path.join(RESULTS_PATH, json_file), "w") as f:
+                json.dump(json_data, f)
+
+        if weight_file is not None and validation_loss < min_validation_loss:
+            min_validation_loss = validation_loss
+            torch.save(encoder.state_dict(), os.path.join(RESULTS_PATH, weight_file))
 
 
-def save_checkpoint(model, train_loss, val_loss, epoch, optimizer, task,fold=None):
-    checkpoint = {
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(), 
-        'train_loss': train_loss, 
-        'val_loss': val_loss 
-    }
-    if fold is not None:
-        filepath = "/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + "_fold" + str(fold) + ".pth"
-    else:
-        filepath = "/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + ".pth"
-    torch.save(checkpoint, filepath)
-
-
-def validate(model, val_dataloader, criterion, epoch, num_epochs, device, task):
+def validate(model, val_dataloader, criterion, metrics, device):
     model.eval()
-    running_loss = 0
+    validation_loss = 0
+    mv = []
     
-    all_outputs = []
-    all_labels = []
+    with torch.no_grad():
+        for inputs, labels in val_dataloader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            validation_loss += loss.item()
+            mv.append(compute_metrics(outputs, labels, metrics))
     
-    for inputs, labels in val_dataloader:
-        inputs = inputs.to(device)
-        labels = labels.to(device)
-        outputs = model(inputs)
-        
-        # if task == "rotate":
-        if task in ["rotate", "rpl"]:
-            labels = torch.argmax(labels, dim=1)
-            labels = labels.squeeze()
-        loss = criterion(outputs, labels)
-
-        all_labels = all_labels + labels.cpu().tolist()
-        all_outputs = all_outputs + torch.argmax(outputs.detach(), dim=1).cpu().tolist() 
-
-        running_loss += loss.item()
-    
-    running_loss = running_loss / len(val_dataloader)
-    print(f'Epoch {epoch+1}/{num_epochs}, Validation Loss: {running_loss}')
-    # score = metrics(all_outputs, all_labels, task, "val", epoch, num_epochs)
-    
-    return running_loss, score
-
-
-
-def main():
-    task = input("What Task are we solving for (rotate, finetune): ")
-    num_epochs = int(input("How many epochs we trying to do (paper recomends 1000 for training for 2D tasks): "))
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print("Using device: " + str(device))
-
-    if task == "rotate":
-        encoder = UNet3dEncoder(1)
-        classifier = MulticlassClassifier(4**3*1024, 10)
-        model = torch.nn.Sequential(encoder, SkipStripper(), classifier)
-        lr = 0.001
-        criterion = nn.CrossEntropyLoss()
-    elif task == "finetune":
-        model = UNet3d(UNet3dEncoder(1), UNet3dDecoder(3))
-        lr = 0.00001
-        criterion = weighted_dice_loss
-    else:
-        print(f"Unknown task: {task}")
-        sys.exit(-1)
-    
-    model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-    train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, task, device)
-    
-
-if __name__ == "__main__":
-    main()
+    validation_loss /= len(val_dataloader)
+    model.train()
+    return validation_loss, average_metrics(mv)
 

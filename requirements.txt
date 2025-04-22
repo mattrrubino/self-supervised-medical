@@ -1,7 +1,7 @@
 kaggle
 nibabel
 scikit-image
-random
 numpy
 torch
 torchvision
+matplotlib

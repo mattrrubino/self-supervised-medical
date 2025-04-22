@@ -14,13 +14,28 @@ import numpy as np
 #@param num_epochs is how many epochs we want to train for
 #@param is th emodel we are training
 #@param optimizer is the optimizer we are using
-def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, task, device, fold=None):
+#@param criterion is the loss function we are using
+#@param task is the task we are solving for
+#@param device is the device we are using
+#@param fold is the fold we are using for cross validation, used to save finetuning checkpoints
+#@param training_percent is the percent of the dataset we are using for finetuning, used to save finetuning checkpoints
+def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, task, device, fold=None, training_percent=None):
     model.train()
     
     #final valdiation score
     val_score = 0
     
     for epoch in range(num_epochs):
+        
+        #warmup epochs for the finetuning task
+        if task == "finetune" and epoch >=5:
+            for param in model.parameters():
+                param.requires_grad = True
+            
+            # Update optimizer to include all params
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.00005)
+        
+        
         running_loss = 0
 
         all_outputs = []
@@ -32,7 +47,7 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
             optimizer.zero_grad()
             
             outputs = model(inputs)
-            if task == "rotate":
+            if task == "rotate" or task == "jigsaw":
                 labels = torch.argmax(labels, dim=1)
                 labels = labels.squeeze()
             elif task == "rpl":
@@ -52,11 +67,14 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
         
         print(f'Epoch {epoch+1}/{num_epochs}, Loss: {running_loss}')
         metrics(all_outputs, all_labels, task, "train")
+
         
 
         val_loss, val_score = validate(model, val_dataloader, criterion, epoch, num_epochs, device, task)
-        if (epoch % 50 == 0  or epoch == num_epochs -1) and epoch != 0:
-            save_checkpoint(model, running_loss, val_loss, epoch, optimizer, task, fold)
+
+        model.train()
+        if (epoch % 25 == 0  or epoch == num_epochs -1) and epoch != 0:
+            save_checkpoint(model, running_loss, val_loss, epoch, optimizer, task, fold, training_percent)
             print(f"Checkpoint saved at epoch {epoch}")
 
         
@@ -65,7 +83,7 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
 
 
 def metrics(outputs, labels, task, split, epoch=None, num_epochs=None):
-    if task in ["rotate", "rpl"]:
+    if task in ["rotate", "rpl", "jigsaw"]:
         f1 = f1_score(labels, outputs, average='macro')
         print(f"F1 {split} Score: {f1}")
     if task == "finetune":
@@ -78,7 +96,8 @@ def metrics(outputs, labels, task, split, epoch=None, num_epochs=None):
     return None    
 
 
-def save_checkpoint(model, train_loss, val_loss, epoch, optimizer, task,fold=None):
+
+def save_checkpoint(model, train_loss, val_loss, epoch, optimizer, task,fold=None, training_percent=None):
     checkpoint = {
         'epoch': epoch,
         'model_state_dict': model.state_dict(),
@@ -87,7 +106,7 @@ def save_checkpoint(model, train_loss, val_loss, epoch, optimizer, task,fold=Non
         'val_loss': val_loss 
     }
     if fold is not None:
-        filepath = "./model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + "_fold" + str(fold) + ".pth"
+        filepath = "./model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + "_fold" + str(fold) + + "training_percent_" + str(training_percent) + ".pth"
     else:
         filepath = "./model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + ".pth"
     torch.save(checkpoint, filepath)
@@ -105,7 +124,7 @@ def validate(model, val_dataloader, criterion, epoch, num_epochs, device, task):
         labels = labels.to(device)
         outputs = model(inputs)
         
-        if task == "rotate":
+        if task == "rotate" or task == "jigsaw":
             labels = torch.argmax(labels, dim=1)
             labels = labels.squeeze()
         elif task == "rpl":
@@ -132,14 +151,24 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-    task = input("What Task are we solving for (rotate/rpl): ")
-    num_epochs = int(input("How many epochs we trying to do (paper recomends 1000 for training for 2D tasks): "))
+    task = input("What Task are we solving for (rotate/rpl/jigsaw): ")
+    num_epochs = int(input("How many epochs we trying to do (Reccomend around 15-25 for training for 2D tasks): "))
 
     print("Using device: " + str(device))
+     
+    print("preprocessing images, this might take a moment ...")
+    #permuation is only used for the jigaw task will not be used for the other tasks
+    train_dataloader, val_dataloader, permuation = load_2dimages(task=task)
+    print("preprocessing done, begining training ...")
 
+    
     if task == "rotate":
         #We are predicting four classes for the densenet rotation
         model.classifier = torch.nn.Linear(model.classifier.in_features, 4)
+
+    if task == "jigsaw":
+        model.classifier = torch.nn.Linear(model.classifier.in_features, len(permuation))
+
     
     elif task == "rpl":
         # first conv layer accepts 2 input channels
@@ -147,15 +176,8 @@ def main():
         model.classifier = torch.nn.Linear(model.classifier.in_features, 8)
     
     model.to(device)
-
     optimizer = optim.Adam(model.parameters(), lr=0.0005)
-
     criterion = nn.CrossEntropyLoss()
-    
-    print("preprocessing images, this might take a moment ...")
-    train_dataloader, val_dataloader = load_2dimages(task=task)
-    print("preprocessing done, begining training ...")
-
 
     train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, task, device)
     
