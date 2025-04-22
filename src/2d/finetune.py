@@ -15,7 +15,7 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
     model = models.densenet121(weights=None)
     if pre_task == "rotate":
         checkpoint = torch.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/rotate/checkpoint25.pth")
-    
+
         #only used for helping with shape requirments while loading
         model.classifier = torch.nn.Linear(model.classifier.in_features, 4)
         
@@ -23,6 +23,14 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
         model.load_state_dict(checkpoint["model_state_dict"])
 
         model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
+
+    if pre_task == "rpl":
+        checkpoint = torch.load("/Users/aspensmith/Desktop/self-supervised-medical/src/2d/model_ckpt/rpl/checkpoint5.pth")
+
+        model.classifier = torch.nn.Linear(model.classifier.in_features, 8)  # 8 relative positions
+        model.load_state_dict(checkpoint["model_state_dict"])
+        model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
+
 
     if pre_task == "jigsaw":
         print("loading jigsaw checkpoint")
@@ -49,9 +57,8 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
     return model, optimzer, criterion
     
 
-
 def main():
-    pre_task = input("What task are we finetuning for (rotate, jigsaw): ")
+    pre_task = input("What task are we finetuning for (rotate/rpl/jigsaw): ")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Using device: " + str(device))
     
@@ -91,7 +98,7 @@ def main():
         
             train_pool = list(train_ids)
     
-            # Sample only a percent of the training depending on the training_percent
+            # sample only a percent of the training depending on the training_percent
             subset_size = int(training_percent[i] * len(train_pool))
             sampled_train_ids = random.sample(train_pool, subset_size)
             
@@ -118,13 +125,6 @@ def main():
     print(all_kappa_scores.shape)
     print(training_percent.shape)
     plot_kappa(all_kappa_scores, training_percent)
-    
-
-
-    
-
-        
-    
     
 
 if __name__ == "__main__":

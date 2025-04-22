@@ -1,6 +1,7 @@
 import numpy as np
 import random
 from PIL import Image
+import torch
 
 # @def rotates a single 2d image and and then returns the classifcation
 # the rotation classification for prediction
@@ -15,14 +16,6 @@ def rotate_2dimages(image):
 
     return image, one_hot
     
-
-
-
-
-
-
-
-
 def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
     overlap_mode = False
     c, h, w = image.shape
@@ -63,3 +56,74 @@ def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
 
 def img_crop(image, x, y, h, w):
     return image[:, x:(x+h), y:(y+w)]
+
+
+def rpl_preprocess(image, grid_size=3, patch_size=(32, 32), jitter=5):
+    """
+    gen a pair of 2D patches (center, query) and the relative position label between them.
+    """
+
+    if image.ndim == 3 and image.shape[0] == 1:
+        image = image.squeeze(0)
+
+    H, W = image.shape
+    step_h, step_w = H // grid_size, W // grid_size
+
+    centers = []
+    for i in range(grid_size):
+        for j in range(grid_size):
+            center_y = i * step_h + step_h // 2
+            center_x = j * step_w + step_w // 2
+
+            jittered_y = np.clip(center_y + np.random.randint(-jitter, jitter+1), patch_size[0]//2, H - patch_size[0]//2)
+            jittered_x = np.clip(center_x + np.random.randint(-jitter, jitter+1), patch_size[1]//2, W - patch_size[1]//2)
+
+            centers.append((jittered_y, jittered_x))
+
+    center_index = len(centers) // 2  # center patch index (4 for 3x3 grid)
+    query_index = random.choice([i for i in range(len(centers)) if i != center_index])
+
+    def extract_patch(cy, cx):
+        y1, y2 = cy - patch_size[0]//2, cy + patch_size[0]//2
+        x1, x2 = cx - patch_size[1]//2, cx + patch_size[1]//2
+        return image[y1:y2, x1:x2]
+
+    center_patch = extract_patch(*centers[center_index])
+    query_patch = extract_patch(*centers[query_index])
+
+    # comp rel label based on grid position difference
+    ci_row, ci_col = center_index // grid_size, center_index % grid_size
+    qi_row, qi_col = query_index // grid_size, query_index % grid_size
+
+    dy, dx = qi_row - ci_row, qi_col - ci_col
+    offsets = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]
+    relative_label = offsets.index((dy, dx))
+
+    # norm and stack as (2, H, W)
+    x_pair = np.stack([center_patch, query_patch], axis=0).astype(np.float32)
+    x_pair = (x_pair - x_pair.min()) / (x_pair.max() - x_pair.min())
+
+    return x_pair, relative_label
+
+def rplify(image, grid_size=3, patch_size=(32, 32), jitter=5):
+    """
+    Applies 2D-RPL pretext transformation to a single image.
+    Returns:
+        torch.Tensor: stacked (2, 224, 224) tensor of patches.
+        int: relative position label (0-7)
+    """
+    from torchvision.transforms import Resize
+
+    image = image.convert("L")  # grayscale
+    image = np.array(image)  # H x W
+
+    x_pair, label = rpl_preprocess(image, grid_size, patch_size, jitter)  # shape: (2, 32, 32)
+    
+    x_pair = torch.from_numpy(x_pair)  # shape: (2, 32, 32)
+    
+    # resize to (2, 224, 224)
+    resize_fn = Resize((224, 224))
+    x_pair = resize_fn(x_pair)
+
+    return x_pair, label
+
