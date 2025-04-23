@@ -24,12 +24,13 @@ class MulticlassClassifier(nn.Module):
         self.out_features = out_features
         self.p = p
 
-        self.l0 = nn.Linear(in_features, 512)
-        self.bn0 = nn.BatchNorm1d(512)
-        self.d0 = nn.Dropout1d(p)
-        self.l1 = nn.Linear(512, 512)
-        self.bn1 = nn.BatchNorm1d(512)
-        self.l2 = nn.Linear(512, out_features)
+        self.l0 = nn.Linear(in_features, 2048)
+        self.bn0 = nn.BatchNorm1d(2048)
+        self.d0 = nn.Dropout(p)
+        self.l1 = nn.Linear(2048, 1024)
+        self.bn1 = nn.BatchNorm1d(1024)
+        self.d1 = nn.Dropout(p)
+        self.l2 = nn.Linear(1024, out_features)
 
     def forward(self, x):
         x = torch.flatten(x, start_dim=1)
@@ -38,6 +39,7 @@ class MulticlassClassifier(nn.Module):
         x = self.d0(x)
         x = F.relu(self.l1(x))
         x = self.bn1(x)
+        x = self.d1(x)
         x = self.l2(x)
         return x
 
