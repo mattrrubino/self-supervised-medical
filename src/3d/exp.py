@@ -7,8 +7,8 @@ from torch.utils.data.dataset import random_split
 
 from loader import PancreasDataset, PancreasPretextDataset
 from metrics import weighted_dice_loss
-from model import create_unet3d, create_classification_head, create_rpl_head
-from pretext import rotation_preprocess, rpl_preprocess
+from model import create_unet3d, create_multiclass_classifier, create_multipatch_classifier
+from pretext import jigsaw_preprocess, rotation_preprocess, rpl_preprocess, PERMUTATIONS
 from train import train, RESULTS_PATH
 
 
@@ -40,12 +40,12 @@ def run_finetune_experiment(json_file, percent_train, percent_val=0.05, wu_epoch
     train(train_dataloader, val_dataloader, wu_epochs, num_epochs, model, optimizer, criterion, metrics, device, json_file)
 
 
-def run_pretext_experiment(json_file, weight_file, pretext_preprocess, create_classifier, n_classes, criterion, percent_val=0.05, num_epochs=1000, batch_size=4):
+def run_pretext_experiment(json_file, weight_file, pretext_preprocess, create_classifier, n_classes, criterion, patches=None, percent_val=0.05, num_epochs=1000, batch_size=4):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     generator = torch.Generator().manual_seed(42)
 
     encoder, _, _ = create_unet3d()
-    classifier = create_classifier(encoder, n_classes)
+    classifier = create_classifier(encoder, n_classes, patches)
 
     dataset = PancreasPretextDataset(pretext_preprocess)
     train_dataset, val_dataset = random_split(dataset, [1-percent_val, percent_val], generator)
@@ -69,7 +69,7 @@ def run_rotation_experiments():
     json_file = "rotation_pancreas.json"
     weight_file = "rotation_pancreas.pth"
     criterion = torch.nn.CrossEntropyLoss()
-    run_pretext_experiment(json_file, weight_file, rotation_preprocess, create_classification_head, 10, criterion)
+    run_pretext_experiment(json_file, weight_file, rotation_preprocess, create_multiclass_classifier, 10, criterion)
 
     for percent in PERCENTS:
         json_file = f"rotation_pancreas_{percent}.json"
@@ -81,7 +81,7 @@ def run_rpl_experiments():
     json_file = "rpl_pancreas.json"
     weight_file = "rpl_pancreas.pth"
     criterion = torch.nn.CrossEntropyLoss()
-    run_pretext_experiment(json_file, weight_file, rpl_preprocess, create_rpl_head, 26, criterion)
+    run_pretext_experiment(json_file, weight_file, rpl_preprocess, create_multipatch_classifier, 26, criterion, patches=2)
 
     for percent in PERCENTS:
         json_file = f"rpl_pancreas_{percent}.json"
@@ -89,8 +89,21 @@ def run_rpl_experiments():
         run_finetune_experiment(json_file, percent_train, weight_file=weight_file)
 
 
+def run_jigsaw_experiments():
+    json_file = "jigsaw_pancreas.json"
+    weight_file = "jigsaw_pancreas.pth"
+    criterion = torch.nn.CrossEntropyLoss()
+    run_pretext_experiment(json_file, weight_file, jigsaw_preprocess, create_multipatch_classifier, len(PERMUTATIONS), criterion, patches=27)
+
+    for percent in PERCENTS:
+        json_file = f"jigsaw_pancreas_{percent}.json"
+        percent_train = percent/100.0
+        run_finetune_experiment(json_file, percent_train, weight_file=weight_file)
+
+
 if __name__ == "__main__":
     # run_baseline_experiments()
     # run_rotation_experiments()
-    run_rpl_experiments()
+    # run_rpl_experiments()
+    run_jigsaw_experiments()
 

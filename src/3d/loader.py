@@ -7,10 +7,6 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from metrics import weighted_dice_loss
-from model import create_classification_head, create_unet3d
-from pretext import preprocess, rotation_preprocess, rpl_preprocess
-
 
 # Pancreas dataset path constants
 PANCREAS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "Task07_Pancreas")

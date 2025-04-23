@@ -1,8 +1,13 @@
+import os
 import random
 
 import numpy as np
 import skimage.transform as skTrans
 import torch
+
+
+PERMUTATION_FILE = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "src", "permutations", "permutations_100_27.npy")
+PERMUTATIONS = np.load(PERMUTATION_FILE)
 
 
 # Operates on a single input
@@ -91,15 +96,16 @@ def rotation_preprocess(data):
         else:
             x_rot = x
         return x_rot, torch.tensor(r)
-    if len(data.shape) == 5:
+    if data.ndim == 5:
         transformed = [rotate(x) for x in data]
         x_rot = torch.stack([x for x,_ in transformed])
-        y_rot = torch.stack([r for _,r in transformed])
+        y_rot = torch.stack([y for _,y in transformed])
     else:
         x_rot, y_rot = rotate(data)
     return x_rot.float(), y_rot.long()
 
 
+# Operates on a single input or multiple inputs
 def rpl_preprocess(data, grid_size=3, patch_size=(32, 32, 32)):
     
     def get_patch(volume, center, size):
@@ -148,9 +154,22 @@ def rpl_preprocess(data, grid_size=3, patch_size=(32, 32, 32)):
     return x_rpl.float().transpose(0, 1), y_rpl.long()
 
 
+# Operates on a single input or multiple inputs
+def jigsaw_preprocess(data):
+    if data.ndim == 5:
+        transformed = [jigsawify(x, True, 3, 3, PERMUTATIONS) for x in data]
+        x_jig = torch.stack([torch.from_numpy(x) for x,_ in transformed])
+        y_jig = torch.stack([torch.tensor(y) for _,y in transformed])
+    else:
+        x_jig, y_jig = jigsawify(data, True, 3, 3, PERMUTATIONS)
+        x_jig = torch.from_numpy(x_jig)
+        y_jig = torch.tensor(y_jig)
+    return x_jig.float(), y_jig.long()
+
+
 def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
     overlap_mode = False
-    c, h, w, d = image.shape
+    _, h, w, d = image.shape
 
     patch_overlap = 0
     if patch_jitter < 0: # If we are given a negative patch jitter, we actually want overlapping patches
@@ -164,7 +183,6 @@ def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
     patch_height = h_step - patch_jitter
     patch_width = w_step - patch_jitter
     patch_depth = d_step - patch_jitter
-
 
     patch_arr = []
     for x in range(patches_per_side):
@@ -187,11 +205,9 @@ def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
                     patch = img_crop(patch, x_patch_start, y_patch_start, z_patch_start, patch_height, patch_width, patch_depth)
                 patch_arr.append(patch)
 
-    label = random.randint(0, len(permutations)-1) # permutation label
-    y = np.zeros((len(permutations),)) # one hot permutation label
-    y[label] = 1
+    y = random.randint(0, len(permutations)-1) # permutation label
+    return np.array(patch_arr)[permutations[y]], y
 
-    return np.array(patch_arr)[np.array(permutations[label])], np.array(y)
 
 def img_crop(image, x, y, z, h, w, d):
     return image[:, x:(x+h), y:(y+w), z:(z+d)]
