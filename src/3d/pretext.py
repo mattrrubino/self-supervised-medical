@@ -145,8 +145,7 @@ def rpl_preprocess(data, grid_size=3, patch_size=(32, 32, 32)):
         x_pair, y = rpl_single(data)
         x_rpl = torch.cat([x_pair[0], x_pair[1]], dim=0).unsqueeze(0)
         y_rpl = y
-    return x_rpl.float(), y_rpl.long()
-
+    return x_rpl.float().transpose(0, 1), y_rpl.long()
 
 
 def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
@@ -196,3 +195,4 @@ def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
 
 def img_crop(image, x, y, z, h, w, d):
     return image[:, x:(x+h), y:(y+w), z:(z+d)]
+
