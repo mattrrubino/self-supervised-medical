@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 import pandas as pd
 import os 
+from pathlib import Path
 
 from pretext_2d import rotate_2dimages, rplify, jigsawify
 from torch.utils.data import random_split
@@ -47,7 +48,7 @@ class Retinal2dDataset(Dataset):
 
 
     def preprocess(self):
-        for image_name in self.image_paths:
+        for ind, image_name in enumerate(self.image_paths):
             img_name = os.path.join(self.image_dir, image_name)
             image = Image.open(img_name)
             
@@ -82,7 +83,7 @@ class Retinal2dDataset(Dataset):
 
         if self.task == "jigsaw":
             img, label = jigsawify(img, self.is_training, self.num_patches, self.jitter, self.permutation)
-            img = torch.from_numpy(img)
+            # img = torch.from_numpy(img)
             label = torch.from_numpy(label)
 
         #we want the actual labels for the finetune task
@@ -98,15 +99,14 @@ def load_2dimages(batch_size = 32, train_split = .95, task = "rotate"):
 
     # Only use transform for rotate and finetune
     transform = None
-    if task in ["rotate", "finetune"]:
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-        ])
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+    ])
 
     image_dataset = Retinal2dDataset(
-        preds_file="/Users/aspensmith/Desktop/self-supervised-medical/src/2d/dataset/train.csv", 
-        image_dir="/Users/aspensmith/Desktop/self-supervised-medical/src/2d/train_images", 
+        preds_file= str(Path(__file__).parent / "dataset/train.csv"), 
+        image_dir=str(Path(__file__).parent / "dataset/train_images"), 
         transform=transform,
         task=task
     )

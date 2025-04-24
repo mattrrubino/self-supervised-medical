@@ -167,7 +167,7 @@ def main():
         model.classifier = torch.nn.Linear(model.classifier.in_features, 4)
 
     if task == "jigsaw":
-        model.classifier = torch.nn.Linear(model.classifier.in_features, len(permuation))
+        model.classifier = torch.nn.Linear(model.classifier.in_features, len(permuation[0]))
 
     
     elif task == "rpl":

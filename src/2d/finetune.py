@@ -34,7 +34,7 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
 
     if pre_task == "jigsaw":
         print("loading jigsaw checkpoint")
-        checkpoint = torch.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/jigsaw/checkpoint499.pth")
+        checkpoint = torch.load("./model_ckpt/jigsaw/checkpoint49.pth")
         
         ###CHANGE THIS IF YOU CHANGE THE PURMUATION
         model.classifier = torch.nn.Linear(model.classifier.in_features, 16)

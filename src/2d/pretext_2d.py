@@ -2,7 +2,8 @@ import numpy as np
 import random
 from PIL import Image
 import torch
-
+import torchvision.transforms as transforms
+import math 
 # @def rotates a single 2d image and and then returns the classifcation
 # the rotation classification for prediction
 # @param is a PIL image to be rotated
@@ -17,8 +18,12 @@ def rotate_2dimages(image):
     return image, one_hot
     
 def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
-    overlap_mode = False
+    # transform = transforms.Compose([
+    #     transforms.ToTensor()
+    # ])
+    # image = transform(image)  # Now it's a Tensor with shape (C, H, W)
     c, h, w = image.shape
+    overlap_mode = False
 
     patch_overlap = 0
     if patch_jitter < 0: # If we are given a negative patch jitter, we actually want overlapping patches
@@ -52,10 +57,30 @@ def jigsawify(image, is_training, patches_per_side, patch_jitter, permutations):
     y = np.zeros((len(permutations),)) # one hot permutation label
     y[label] = 1
 
-    return np.array(patch_arr)[np.array(permutations[label])], np.array(y)
+    patch_arr = np.array([patch.numpy() for patch in patch_arr])
+    output_arr = patch_arr[permutations[label]]
+    return reform_image(output_arr), np.array(y)
 
 def img_crop(image, x, y, h, w):
     return image[:, x:(x+h), y:(y+w)]
+
+def reform_image(patches):
+    C, H, W = patches[0].shape
+
+    num_patches = int(math.sqrt(len(patches)))
+
+    # Reshape into grid and concatenate
+    rows = []
+    for i in range(num_patches):
+        row_patches = [patches[i * num_patches + j] for j in range(num_patches)]
+        row = np.concatenate(row_patches, axis=2)  # concat along width
+        rows.append(row)
+
+    full_image = np.concatenate(rows, axis=1)  # concat rows along height
+
+    return torch.from_numpy(full_image)
+
+
 
 
 def rpl_preprocess(image, grid_size=3, patch_size=(32, 32), jitter=5):
