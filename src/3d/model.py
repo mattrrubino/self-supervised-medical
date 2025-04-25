@@ -186,7 +186,7 @@ class MultipatchEmbedder(nn.Module):
             patch = x[:,i].unsqueeze(1)
             t, _ = self.encoder(patch)
             t = t.flatten(start_dim=1)
-            t = self.heads[i](t)
+            t = head(t)
             t = F.sigmoid(t)
             out.append(t)
         return out
