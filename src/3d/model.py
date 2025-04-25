@@ -172,6 +172,26 @@ class MultipatchClassifier(nn.Module):
         return x
 
 
+class MultipatchEmbedder(nn.Module):
+    def __init__(self, encoder, hidden_dim, code_size, channels):
+        super().__init__()
+        self.encoder = encoder
+        self.heads = nn.ModuleList(
+            nn.Linear(hidden_dim, code_size) for _ in range(channels)
+        )
+
+    def forward(self, x):
+        out = []
+        for i,head in enumerate(self.heads):
+            patch = x[:,i].unsqueeze(1)
+            t, _ = self.encoder(patch)
+            t = t.flatten(start_dim=1)
+            t = self.heads[i](t)
+            t = F.sigmoid(t)
+            out.append(t)
+        return out
+
+
 def create_unet3d(filters_in=1, filters_out=3, filters=16, num_layers=4):
     encoder = UNet3dEncoder(filters_in, filters, num_layers)
     decoder = UNet3dDecoder(filters_out, filters, num_layers)
@@ -195,4 +215,12 @@ def create_multipatch_classifier(encoder, classes, patches, data_dim=39):
     head = MulticlassClassifier(patches*hidden_dim, classes)
     classifier = MultipatchClassifier(encoder, head)
     return classifier
+
+
+def create_multipatch_embedder(encoder, classes, patches, data_dim=128):
+    filters = encoder.filters
+    num_layers = encoder.num_layers
+    hidden_dim = int((filters*2**num_layers)*((data_dim//(2**(num_layers+1)))**3))
+    embedder = MultipatchEmbedder(encoder, hidden_dim, classes, patches)
+    return embedder
 

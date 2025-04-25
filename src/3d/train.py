@@ -23,6 +23,8 @@ def epoch_text(epoch, prefix, l, m):
 
 
 def compute_metrics(preds, y, metrics):
+    if y is None:
+        return {}
     op = {
         "dice": weighted_dice,
         "dice_0": lambda a, b: weighted_dice_per_class(a, b, 0),
@@ -58,11 +60,11 @@ def train(train_dataloader, val_dataloader, wu_epochs, num_epochs, model, optimi
         mt = []
         for i, (x, y) in enumerate(train_dataloader):
             x = x.to(device)
-            y = y.to(device)
+            y = y.to(device) if y is not None else y
 
             optimizer.zero_grad()
             preds = model(x)
-            loss = criterion(preds, y)
+            loss = criterion(preds, y) if y is not None else criterion(*preds)
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
@@ -109,9 +111,11 @@ def validate(model, val_dataloader, criterion, metrics, device):
     with torch.no_grad():
         for inputs, labels in val_dataloader:
             inputs = inputs.to(device)
-            labels = labels.to(device)
+            labels = labels.to(device) if labels is not None else labels
+
             outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            loss = criterion(outputs, labels) if labels is not None else criterion(*outputs)
+
             validation_loss += loss.item()
             mv.append(compute_metrics(outputs, labels, metrics))
     

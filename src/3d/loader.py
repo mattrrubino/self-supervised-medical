@@ -64,8 +64,7 @@ PANCREAS_LABELS = sorted([os.path.join(PANCREAS_LABELS_PATH, x) for x in os.list
 
 
 class PancreasPretextDataset(Dataset):
-    def __init__(self, pretext_preprocess):
-        self.pretext_preprocess = pretext_preprocess
+    def __init__(self):
         self.x = np.stack([np.load(x) for x in PANCREAS_IMAGES])
         self.x = torch.from_numpy(self.x)
 
@@ -73,7 +72,7 @@ class PancreasPretextDataset(Dataset):
         return len(self.x)
 
     def __getitem__(self, idx):
-        return self.pretext_preprocess(self.x[idx])
+        return self.x[idx]
 
 
 class PancreasDataset(Dataset):
