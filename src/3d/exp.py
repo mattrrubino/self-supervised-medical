@@ -7,8 +7,8 @@ from torch.utils.data.dataset import random_split
 
 from loader import PancreasDataset, PancreasPretextDataset
 from metrics import weighted_dice_loss
-from model import create_unet3d, create_classification_head
-from pretext import rotation_preprocess
+from model import create_unet3d, create_classification_head, rpl_create_classification_head
+from pretext import rotation_preprocess, rpl_preprocess
 from train import train, RESULTS_PATH
 
 
@@ -41,8 +41,12 @@ def run_pretext_experiment(json_file, weight_file, pretext_preprocess, n_classes
     device = "cuda" if torch.cuda.is_available() else "cpu"
     generator = torch.Generator().manual_seed(42)
 
-    encoder, _, _ = create_unet3d()
-    classifier = create_classification_head(encoder, n_classes)
+    if pretext_preprocess == rpl_preprocess:
+        encoder, _, _ = create_unet3d(filters_in=2)
+        classifier = rpl_create_classification_head(encoder, 26, input_shape=(2, 39, 39, 39))
+    else:
+        encoder, _, _ = create_unet3d()
+        classifier = create_classification_head(encoder, n_classes)
 
     dataset = PancreasPretextDataset(pretext_preprocess)
     train_dataset, val_dataset = random_split(dataset, [1-percent_val, percent_val], generator)
@@ -72,9 +76,23 @@ def run_rotation_experiments():
         json_file = f"rotation_pancreas_{percent}.json"
         percent_train = percent/100.0
         run_finetune_experiment(json_file, percent_train, weight_file=weight_file)
+    
+def run_rpl_experiments():
+    json_file = "rpl_pancreas.json"
+    weight_file = "rpl_pancreas.pth"
+    criterion = torch.nn.CrossEntropyLoss()
+    
+    # Run pretext training
+    run_pretext_experiment(json_file, weight_file, rpl_preprocess, 10, criterion)
+
+    # Fine-tuning with varying amounts of data
+    for percent in [5, 10, 25, 50, 100]:
+        json_file = f"rpl_pancreas_{percent}.json"
+        percent_train = percent / 100.0
+        run_finetune_experiment(json_file=json_file, percent_train=percent_train, weight_file=weight_file)
 
 
 if __name__ == "__main__":
     # run_baseline_experiments()
-    run_rotation_experiments()
-
+    # run_rotation_experiments()
+    run_rpl_experiments()
