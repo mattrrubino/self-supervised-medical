@@ -106,7 +106,7 @@ def save_checkpoint(model, train_loss, val_loss, epoch, optimizer, task,fold=Non
         'val_loss': val_loss 
     }
     if fold is not None:
-        filepath = "./model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + "_fold" + str(fold) + + "training_percent_" + str(training_percent) + ".pth"
+        filepath = "./model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + "_fold" + str(fold) + "training_percent_" + str(training_percent) + ".pth"
     else:
         filepath = "./model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + ".pth"
     torch.save(checkpoint, filepath)
