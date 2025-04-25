@@ -158,13 +158,13 @@ class SkipStripper(nn.Module):
 
 
 class MultipatchClassifier(nn.Module):
-    def __init__(self, encoder, head):
+    def __init__(self, encoder, hidden_dim, code_size):
         super().__init__()
         self.encoder = encoder
-        self.head = head
+        self.head = MulticlassClassifier(hidden_dim, code_size)
 
     def forward(self, x):
-        b = len(x)
+        b = x.shape[0]
         x = torch.flatten(x, end_dim=1)
         x, _ = self.encoder(x)
         x = x.reshape(b, -1)
@@ -173,23 +173,20 @@ class MultipatchClassifier(nn.Module):
 
 
 class MultipatchEmbedder(nn.Module):
-    def __init__(self, encoder, hidden_dim, code_size, channels):
+    def __init__(self, encoder, hidden_dim, code_size):
         super().__init__()
         self.encoder = encoder
-        self.heads = nn.ModuleList(
-            nn.Linear(hidden_dim, code_size) for _ in range(channels)
-        )
+        self.head = nn.Linear(hidden_dim, code_size)
 
     def forward(self, x):
-        out = []
-        for i,head in enumerate(self.heads):
-            patch = x[:,i].unsqueeze(1)
-            t, _ = self.encoder(patch)
-            t = t.flatten(start_dim=1)
-            t = head(t)
-            t = F.sigmoid(t)
-            out.append(t)
-        return out
+        b, c = x.shape[:2]
+        x = torch.flatten(x, end_dim=1)
+        x = torch.unsqueeze(x, 1)
+        x, _ = self.encoder(x)
+        x = x.reshape(b, c, -1)
+        x = self.head(x)
+        x = F.sigmoid(x)
+        return [x[:,i] for i in range(c)]
 
 
 def create_unet3d(filters_in=1, filters_out=3, filters=16, num_layers=4):
@@ -212,15 +209,14 @@ def create_multipatch_classifier(encoder, classes, patches, data_dim=39):
     filters = encoder.filters
     num_layers = encoder.num_layers
     hidden_dim = int((filters*2**num_layers)*((data_dim//(2**(num_layers+1)))**3))
-    head = MulticlassClassifier(patches*hidden_dim, classes)
-    classifier = MultipatchClassifier(encoder, head)
+    classifier = MultipatchClassifier(encoder, patches*hidden_dim, classes)
     return classifier
 
 
-def create_multipatch_embedder(encoder, classes, patches, data_dim=128):
+def create_multipatch_embedder(encoder, classes, _, data_dim=128):
     filters = encoder.filters
     num_layers = encoder.num_layers
     hidden_dim = int((filters*2**num_layers)*((data_dim//(2**(num_layers+1)))**3))
-    embedder = MultipatchEmbedder(encoder, hidden_dim, classes, patches)
+    embedder = MultipatchEmbedder(encoder, hidden_dim, classes)
     return embedder
 

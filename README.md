@@ -6,9 +6,13 @@ not the case, you may need to modify the PyTorch installation in `setup.sh`.
 
 To get started, execute the following:
 
+Note: In order for the setup.sh script to download the 2D Diabetic Retinopathy dataset from Kaggle, you first need to do the following:
+
+1) Ensure you have a Kaggle account created: https://www.kaggle.com/
+2) Create a Kaggle API token. To do this, navigate to your Kaggle Settings (https://www.kaggle.com/settings), scroll down, and click "Create New Token". This will download a kagge.json file which you need to move into the root of this repository.
+
 ```bash
 git clone git@github.com:mattrrubino/self-supervised-medical.git
 cd self-supervised-medical
 ./setup.sh
 ```
-
