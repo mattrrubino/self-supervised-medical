@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import Dataset
 
 from metrics import weighted_dice_loss
-from model import create_classification_head, create_unet3d
+from model import MulticlassClassifier, create_classification_head, create_unet3d
 from pretext import preprocess, rotation_preprocess, rpl_preprocess
 
 
@@ -126,30 +126,46 @@ if False:
 
 if False:
     def run_rpl():
-        encoder, _, model = create_unet3d()
-        classifier = create_classification_head(encoder, 26) # 26 relative position
-
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        model = model.to(device)
+
+        # pretext
+        encoder_pretext, _, _ = create_unet3d(filters_in=2)
+        classifier = create_classification_head(encoder_pretext, 26, data_dim=32)
+
+        encoder_pretext = encoder_pretext.to(device)
         classifier = classifier.to(device)
 
-        # pretext 
         dataset = PancreasPretextDataset(rpl_preprocess)
-        loss = torch.nn.CrossEntropyLoss()
+        loss_fn = torch.nn.CrossEntropyLoss()
+
         x, y = dataset[:2]
         x = x.to(device)
         y = y.to(device)
+        print(f"x.shape (RPL input): {x.shape}")
         preds = classifier(x)
-        print(f"RPL Loss: {loss(preds, y)}")
+        print(f"RPL Loss: {loss_fn(preds, y)}")
 
         # finetune
+        encoder_finetune, decoder_finetune, model = create_unet3d(filters_in=1)
+
+        # ld pretext weights into finetune encoder (excluding conv1)
+        state_dict_pretext = encoder_pretext.state_dict()
+        filtered_state_dict = {
+            k: v for k, v in state_dict_pretext.items()
+            if "layers.0.conv1" not in k  # skip first conv layer (wrong in_channels)
+        }
+        encoder_finetune.load_state_dict(filtered_state_dict, strict=False)
+
+        model = model.to(device)
         dataset = PancreasDataset()
         loss = weighted_dice_loss
+
         x, y = dataset[:2]
         x = x.to(device)
         y = y.to(device)
+        print(f"x.shape (CT input): {x.shape}")
         preds = model(x)
-        print(f"Segmentation Loss: {loss(preds, y)}") 
+        print(f"Segmentation Loss: {loss(preds, y)}")
 
 
 if __name__ == "__main__":
