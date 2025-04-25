@@ -181,6 +181,7 @@ class MultipatchEmbedder(nn.Module):
     def forward(self, x):
         b, c = x.shape[:2]
         x = torch.flatten(x, end_dim=1)
+        x = torch.unsqueeze(x, 1)
         x, _ = self.encoder(x)
         x = x.reshape(b, c, -1)
         x = self.head(x)
