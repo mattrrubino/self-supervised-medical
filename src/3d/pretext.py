@@ -106,52 +106,72 @@ def rotation_preprocess(data):
     return x_rot.float(), y_rot.long()
 
 
-# Operates on a single input or multiple inputs
-def rpl_preprocess(data, grid_size=3, patch_size=(32, 32, 32)):
+def patchify_3d(volume, grid_size=3, patch_size=(39, 39, 39), jitter=3):
+    """
+    split a 3D volume into jittered patches and return all patches and their grid positions
+    """
+    D, H, W = volume.shape
+    step_d, step_h, step_w = D // grid_size, H // grid_size, W // grid_size
+
+    patches = []
+    centers = []
+
+    for i in range(grid_size):
+        for j in range(grid_size):
+            for k in range(grid_size):
+                center = [
+                    i * step_d + step_d // 2,
+                    j * step_h + step_h // 2,
+                    k * step_w + step_w // 2
+                ]
+
+                jittered_center = [
+                    np.clip(center[0] + np.random.randint(-jitter, jitter + 1), patch_size[0]//2, D - patch_size[0]//2),
+                    np.clip(center[1] + np.random.randint(-jitter, jitter + 1), patch_size[1]//2, H - patch_size[1]//2),
+                    np.clip(center[2] + np.random.randint(-jitter, jitter + 1), patch_size[2]//2, W - patch_size[2]//2)
+                ]
+
+                slices = tuple(slice(c - s // 2, c + s // 2) for c, s in zip(jittered_center, patch_size))
+                patch = volume[slices]
+
+                # zero-pad any undersized patch to guarantee [39, 39, 39]
+                if patch.shape != patch_size:
+                    pad = [(0, max(0, s - patch.shape[i])) for i, s in enumerate(patch_size)]
+                    patch = np.pad(patch, pad_width=pad, mode='constant')
+
+                patches.append(torch.tensor(patch, dtype=torch.float32))
+                centers.append((i, j, k))
+
+    return patches, centers
+
+
+def rpl_preprocess(data, grid_size=3, patch_size=(39, 39, 39), jitter=3):
+    """
+    create a (2, D, H, W) input where the first and second patches come from
+    a grid of jittered 3D patches
     
-    def get_patch(volume, center, size):
-        slices = tuple(slice(c - s // 2, c + s // 2) for c, s in zip(center, size))
-        return volume[slices]
+    label is the relative spatial index (0-25)
+    """
+    def rpl_single(volume_tensor):
+        volume = volume_tensor.squeeze().numpy()
+        patches, _ = patchify_3d(volume, grid_size=grid_size, patch_size=patch_size, jitter=jitter)
 
-    def rpl_single(x_tensor):
-        x_np = x_tensor.squeeze().numpy()
-        vol_shape = x_np.shape
-        step = [vol_shape[i] // grid_size for i in range(3)]
+        center_idx = len(patches) // 2
+        query_idx = random.choice([i for i in range(len(patches)) if i != center_idx])
 
-        # random jitter (up to ±step//4 in each direction)
-        jitter_range = [s // 4 for s in step] # maybe change to jitter_range = [3, 3, 3]??? 3 voxels matches the paper exactly 
+        xc = patches[center_idx].unsqueeze(0)  # shape: (1, 39, 39, 39)
+        xq = patches[query_idx].unsqueeze(0)
 
-        patches = []
-        centers = []
-        for i in range(grid_size):
-            for j in range(grid_size):
-                for k in range(grid_size):
-                    center = [i * step[0] + step[0] // 2,
-                              j * step[1] + step[1] // 2,
-                              k * step[2] + step[2] // 2]
-                    jittered_center = [np.clip(c + np.random.randint(-j_range, j_range+1), size//2, vol_shape[idx]-size//2)
-                                       for idx, (c, j_range, size) in enumerate(zip(center, jitter_range, patch_size))]
-                    patch = get_patch(x_np, jittered_center, patch_size)
-                    patches.append(torch.tensor(patch, dtype=torch.float32))
-                    centers.append((i, j, k))
+        rel_label = query_idx if query_idx < center_idx else query_idx - 1
+        return (torch.cat([xc, xq], dim=0), torch.tensor(rel_label))
 
-        center_index = len(patches) // 2
-        query_index = random.choice([i for i in range(len(patches)) if i != center_index])
-        xc = patches[center_index].unsqueeze(0)  # 1x32x32x32
-        xq = patches[query_index].unsqueeze(0)
-
-        relative_position = query_index if query_index < center_index else query_index - 1
-        return (torch.stack([xc, xq], dim=0), torch.tensor(relative_position))
-
-    # batch or single
     if data.ndim == 5:
         transformed = [rpl_single(x) for x in data]
-        x_rpl = torch.stack([torch.cat([item[0][0], item[0][1]], dim=0) for item in transformed])
-        y_rpl = torch.stack([item[1] for item in transformed])
+        x_rpl = torch.stack([x for x,_ in transformed])
+        y_rpl = torch.stack([y for _,y in transformed])
     else:
-        x_pair, y = rpl_single(data)
-        x_rpl = torch.cat([x_pair[0], x_pair[1]], dim=0).unsqueeze(0)
-        y_rpl = y
+        x_rpl, y_rpl = rpl_single(data)
+
     return x_rpl.float().transpose(0, 1), y_rpl.long()
 
 

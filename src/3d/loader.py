@@ -7,6 +7,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from pretext import preprocess
+
 
 # Pancreas dataset path constants
 PANCREAS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "Task07_Pancreas")
