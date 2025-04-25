@@ -127,6 +127,12 @@ def patchify_3d(volume, grid_size=3, patch_size=(39, 39, 39), jitter=3):
 
                 slices = tuple(slice(c - s // 2, c + s // 2) for c, s in zip(jittered_center, patch_size))
                 patch = volume[slices]
+
+                # zero-pad any undersized patch to guarantee [39, 39, 39]
+                if patch.shape != patch_size:
+                    pad = [(0, max(0, s - patch.shape[i])) for i, s in enumerate(patch_size)]
+                    patch = np.pad(patch, pad_width=pad, mode='constant')
+
                 patches.append(torch.tensor(patch, dtype=torch.float32))
                 centers.append((i, j, k))
 

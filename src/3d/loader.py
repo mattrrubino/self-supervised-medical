@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import Dataset
 
 from metrics import weighted_dice_loss
-from model import MulticlassClassifier, create_classification_head, create_unet3d
+from model import MulticlassClassifier, create_classification_head, rpl_create_classification_head, create_unet3d
 from pretext import preprocess, rotation_preprocess, rpl_preprocess
 
 
@@ -130,7 +130,7 @@ if False:
 
         # pretext
         encoder_pretext, _, _ = create_unet3d(filters_in=2)
-        classifier = create_classification_head(encoder_pretext, 26, data_dim=32)
+        classifier = rpl_create_classification_head(encoder_pretext, 26, input_shape=(2, 39, 39, 39))
 
         encoder_pretext = encoder_pretext.to(device)
         classifier = classifier.to(device)
@@ -171,5 +171,5 @@ if False:
 if __name__ == "__main__":
     PancreasDataset()
     # run_rotation()
-    # run_rpl()
+    run_rpl()
 

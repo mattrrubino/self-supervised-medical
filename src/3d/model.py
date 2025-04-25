@@ -170,3 +170,14 @@ def create_classification_head(encoder, classes, data_dim=128):
     classifier = torch.nn.Sequential(encoder, SkipStripper(), head)
     return classifier
 
+
+def rpl_create_classification_head(encoder, classes, input_shape=(2, 39, 39, 39)):
+    # run a dummy input through the encoder to get the output shape
+    dummy_input = torch.randn(1, *input_shape)
+    with torch.no_grad():
+        out, _ = encoder(dummy_input)
+    flattened_dim = out.view(1, -1).shape[1]
+
+    head = MulticlassClassifier(flattened_dim, classes)
+    classifier = torch.nn.Sequential(encoder, SkipStripper(), head)
+    return classifier
