@@ -3,9 +3,8 @@ import os
 import sys
 
 import torch
-import torch.nn.functional as F
 
-from metrics import weighted_dice, weighted_dice_per_class
+from metrics import weighted_dice, weighted_dice_per_class, accuracy_from_logits, triplet_accuracy
 
 
 RESULTS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "results")
@@ -23,19 +22,13 @@ def epoch_text(epoch, prefix, l, m):
     return f"[EPOCH {epoch}] {prefix}: - loss {l:08.7f} - {metric_text}"
 
 
-def triplet_accuracy(a, p, n):
-    ap_dist = F.pairwise_distance(a, p)
-    an_dist = F.pairwise_distance(a, n)
-    return (ap_dist < an_dist).float().mean()
-
-
 def compute_metrics(preds, y, metrics):
     op = {
         "dice": weighted_dice,
         "dice_0": lambda a, b: weighted_dice_per_class(a, b, 0),
         "dice_1": lambda a, b: weighted_dice_per_class(a, b, 1),
         "dice_2": lambda a, b: weighted_dice_per_class(a, b, 2),
-        "accuracy": lambda a, b: (torch.argmax(a, dim=-1) == b).float().mean() if b is not None else triplet_accuracy(*a),
+        "accuracy": lambda a, b: accuracy_from_logits(a, b) if b is not None else triplet_accuracy(*a),
     }
     return {metric: op[metric](preds, y).item() for metric in metrics}
 
