@@ -115,9 +115,10 @@ def run_exemplar_experiments():
 
 
 if __name__ == "__main__":
+    pass
     # run_baseline_experiments()
     # run_rotation_experiments()
-    run_rpl_experiments()
+    # run_rpl_experiments()
     #run_jigsaw_experiments()
     #run_exemplar_experiments()
 

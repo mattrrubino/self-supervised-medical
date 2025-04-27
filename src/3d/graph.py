@@ -11,7 +11,7 @@ from train import RESULTS_PATH
 GRAPHS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "graphs")
 if not os.path.exists(GRAPHS_PATH):
     os.makedirs(GRAPHS_PATH, exist_ok=True)
-TASKS = ["rotation", "jigsaw", "baseline"]
+TASKS = ["baseline", "jigsaw", "rotation", "rpl", "exemplar"]
 
 
 def smooth(y, count=10):
@@ -22,7 +22,7 @@ def create_train_graph():
     results = [x for x in os.listdir(RESULTS_PATH) if "baseline_pancreas" in x]
     x = sorted([int(re.match(r"baseline_pancreas_(\d+).json", x).group(1)) for x in results]) # pyright: ignore
 
-    plt.figure(figsize=(15, 10))
+    plt.figure(figsize=(6, 4))
     for task in TASKS:
         y = []
         for percent in x:
@@ -42,7 +42,7 @@ def create_train_graph():
 
 
 def create_epoch_graph():
-    plt.figure(figsize=(15, 10))
+    plt.figure(figsize=(6, 4))
     for task in TASKS:
         filepath = os.path.join(RESULTS_PATH, f"{task}_pancreas_100.json")
         with open(filepath) as f:
