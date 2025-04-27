@@ -6,10 +6,11 @@ not the case, you may need to modify the PyTorch installation in `setup.sh`.
 
 To get started, execute the following:
 
-Note: In order for the setup.sh script to download the 2D Diabetic Retinopathy dataset from Kaggle, you first need to do the following:
+Note: In order for the setup.sh script to download the APTOS 2019 Blindness Detection dataset from Kaggle, you first need to do the following:
 
 1) Ensure you have a Kaggle account created: https://www.kaggle.com/
 2) Create a Kaggle API token. To do this, navigate to your Kaggle Settings (https://www.kaggle.com/settings), scroll down, and click "Create New Token". This will download a kagge.json file which you need to move into the root of this repository.
+3) Navigate to the APTOS 2019 Blindness Detection Kaggle page (https://www.kaggle.com/competitions/aptos2019-blindness-detection/data), scroll down, and agree to the competition rules. You must do this before Kaggle will let you download the data.
 
 ```bash
 git clone git@github.com:mattrrubino/self-supervised-medical.git
