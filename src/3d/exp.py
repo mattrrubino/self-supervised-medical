@@ -44,7 +44,7 @@ def run_pretext_experiment(json_file, weight_file, pretext_preprocess, create_cl
     device = "cuda" if torch.cuda.is_available() else "cpu"
     generator = torch.Generator().manual_seed(42)
 
-    encoder, _, _ = create_unet3d(filters_in=2)
+    encoder, _, _ = create_unet3d()
     classifier = create_classifier(encoder, n_classes, patches)
 
     dataset = PancreasPretextDataset()

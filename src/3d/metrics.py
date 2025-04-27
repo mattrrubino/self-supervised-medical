@@ -1,5 +1,6 @@
 import numpy as np
 import torch.nn.functional as F
+import torch
 
 
 def weighted_dice(preds: np.ndarray, y: np.ndarray, smooth=0.00001):
@@ -23,7 +24,7 @@ def weighted_dice_loss(preds: np.ndarray, y: np.ndarray):
 
 
 def accuracy_from_logits(preds: np.ndarray, y: np.ndarray):
-    labels = np.argmax(preds, axis=-1)
+    labels = torch.argmax(preds, axis=-1)
     return (labels == y).float().mean()
 
 
