@@ -40,7 +40,7 @@ def run_finetune_experiment(json_file, percent_train, percent_val=0.05, wu_epoch
     train(train_dataloader, val_dataloader, wu_epochs, num_epochs, model, optimizer, criterion, metrics, device, json_file)
 
 
-def run_pretext_experiment(json_file, weight_file, pretext_preprocess, create_classifier, criterion, n_classes=None, patches=None, percent_val=0.05, num_epochs=1000, batch_size=4):
+def run_pretext_experiment(json_file, weight_file, pretext_preprocess, create_classifier, criterion, n_classes=None, patches=None, percent_val=0.05, num_epochs=1000, batch_size=4, lr=1e-3):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     generator = torch.Generator().manual_seed(42)
 
@@ -53,8 +53,6 @@ def run_pretext_experiment(json_file, weight_file, pretext_preprocess, create_cl
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate)
 
-    # lr = 1e-3
-    lr = 1e-5
     optimizer = optim.Adam(classifier.parameters(), lr=lr, eps=1e-7)
     metrics = ["accuracy"]
     train(train_dataloader, val_dataloader, 0, num_epochs, classifier, optimizer, criterion, metrics, device, json_file, weight_file)
@@ -95,7 +93,7 @@ def run_ds_rpl_experiments():
     json_file = "ds_rpl_pancreas.json"
     weight_file = "ds_rpl_pancreas.pth"
     criterion = torch.nn.CrossEntropyLoss()
-    run_pretext_experiment(json_file, weight_file, rpl_preprocess, create_ds_multipatch_classifier, criterion, n_classes=26, patches=2)
+    run_pretext_experiment(json_file, weight_file, rpl_preprocess, create_ds_multipatch_classifier, criterion, n_classes=26, patches=2, lr=1e-5)
 
     for percent in PERCENTS:
         json_file = f"ds_rpl_pancreas_{percent}.json"
