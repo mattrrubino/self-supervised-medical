@@ -7,9 +7,7 @@ import torch
 import torch.nn.functional as F
 
 
-#PERMUTATION_FILE = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "src", "permutations", "permutations_100_27.npy")
-PERMUTATION_FILE = "/home/caleb/school/deep_learning/self-supervised-medical/src/permutations/permutations_100_27.npy"
-
+PERMUTATION_FILE = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "src", "permutations", "permutations_100_27.npy")
 PERMUTATIONS = np.load(PERMUTATION_FILE)
 
 
