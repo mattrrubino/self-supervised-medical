@@ -7,7 +7,7 @@ from torch.utils.data.dataset import random_split
 
 from loader import PancreasDataset, PancreasPretextDataset
 from metrics import weighted_dice_loss
-from model import create_unet3d, create_multiclass_classifier, create_multipatch_classifier, create_multipatch_embedder
+from model import create_ds_multipatch_classifier, create_unet3d, create_multiclass_classifier, create_multipatch_classifier, create_multipatch_embedder
 from pretext import exemplar_preprocess, jigsaw_preprocess, rotation_preprocess, rpl_preprocess, PERMUTATIONS
 from train import train, RESULTS_PATH
 
@@ -53,7 +53,8 @@ def run_pretext_experiment(json_file, weight_file, pretext_preprocess, create_cl
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate)
 
-    lr = 1e-3
+    # lr = 1e-3
+    lr = 1e-5
     optimizer = optim.Adam(classifier.parameters(), lr=lr, eps=1e-7)
     metrics = ["accuracy"]
     train(train_dataloader, val_dataloader, 0, num_epochs, classifier, optimizer, criterion, metrics, device, json_file, weight_file)
@@ -90,6 +91,18 @@ def run_rpl_experiments():
         run_finetune_experiment(json_file, percent_train, weight_file=weight_file)
 
 
+def run_ds_rpl_experiments():
+    json_file = "ds_rpl_pancreas.json"
+    weight_file = "ds_rpl_pancreas.pth"
+    criterion = torch.nn.CrossEntropyLoss()
+    run_pretext_experiment(json_file, weight_file, rpl_preprocess, create_ds_multipatch_classifier, criterion, n_classes=26, patches=2)
+
+    for percent in PERCENTS:
+        json_file = f"ds_rpl_pancreas_{percent}.json"
+        percent_train = percent/100.0
+        run_finetune_experiment(json_file, percent_train, weight_file=weight_file)
+
+
 def run_jigsaw_experiments():
     json_file = "jigsaw_pancreas.json"
     weight_file = "jigsaw_pancreas.pth"
@@ -115,10 +128,10 @@ def run_exemplar_experiments():
 
 
 if __name__ == "__main__":
-    pass
     # run_baseline_experiments()
     # run_rotation_experiments()
     # run_rpl_experiments()
-    #run_jigsaw_experiments()
-    #run_exemplar_experiments()
+    run_ds_rpl_experiments()
+    # run_jigsaw_experiments()
+    # run_exemplar_experiments()
 

@@ -23,6 +23,8 @@ def epoch_text(epoch, prefix, l, m):
 
 
 def compute_metrics(preds, y, metrics):
+    if isinstance(preds, torch.Tensor) and preds.ndim == 3:
+        return {} # TODO: Implement
     op = {
         "dice": weighted_dice,
         "dice_0": lambda a, b: weighted_dice_per_class(a, b, 0),
@@ -62,6 +64,9 @@ def train(train_dataloader, val_dataloader, wu_epochs, num_epochs, model, optimi
 
             optimizer.zero_grad()
             preds = model(x)
+            if isinstance(preds, torch.Tensor) and preds.ndim == 3:
+                c = preds.shape[-1]
+                y = y.repeat((c, 1)).transpose(0, 1)
             loss = criterion(preds, y) if y is not None else criterion(*preds)
             loss.backward()
 
@@ -112,6 +117,9 @@ def validate(model, val_dataloader, criterion, metrics, device):
             labels = labels.to(device) if labels is not None else labels
 
             outputs = model(inputs)
+            if isinstance(outputs, torch.Tensor) and outputs.ndim == 3:
+                c = outputs.shape[-1]
+                labels = labels.repeat((c, 1)).transpose(0, 1)
             loss = criterion(outputs, labels) if labels is not None else criterion(*outputs)
 
             validation_loss += loss.item()

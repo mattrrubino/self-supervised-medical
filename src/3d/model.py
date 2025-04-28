@@ -190,6 +190,28 @@ class MultipatchEmbedder(nn.Module):
         return [x[:,i] for i in range(c)]
 
 
+class DSMultipatchClassifier(nn.Module):
+    def __init__(self, encoder, hidden_dims, classes):
+        super().__init__()
+        self.encoder = encoder
+        self.heads = nn.ModuleList(
+            nn.Linear(hidden_dim, classes)
+            for hidden_dim in hidden_dims
+        )
+
+    def forward(self, x):
+        b = x.shape[0]
+        x = torch.flatten(x, end_dim=1)
+        x = torch.unsqueeze(x, 1)
+        x, hiddens = self.encoder(x)
+        out = []
+        for head, hidden in zip(self.heads, [*hiddens, x]):
+            hidden = hidden.reshape(b, -1)
+            out.append(head(hidden))
+        x = torch.stack(out, dim=-1)
+        return x
+
+
 def create_unet3d(filters_in=1, filters_out=3, filters=16, num_layers=4):
     encoder = UNet3dEncoder(filters_in, filters, num_layers)
     decoder = UNet3dDecoder(filters_out, filters, num_layers)
@@ -220,4 +242,15 @@ def create_multipatch_embedder(encoder, classes, _, data_dim=128):
     hidden_dim = int((filters*2**num_layers)*((data_dim//(2**(num_layers+1)))**3))
     embedder = MultipatchEmbedder(encoder, hidden_dim, classes)
     return embedder
+
+
+def create_ds_multipatch_classifier(encoder, classes, patches, data_dim=39):
+    hidden_dims = []
+    for i in range(encoder.num_layers+1):
+        filters = encoder.filters * 2**i
+        dim = data_dim // (2**i)
+        hidden_dims.append(patches*filters*dim**3)
+    hidden_dims[-1] = hidden_dims[-1] // (2**3)
+    classifier = DSMultipatchClassifier(encoder, hidden_dims, classes)
+    return classifier
 
