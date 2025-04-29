@@ -11,7 +11,7 @@ from train import RESULTS_PATH
 GRAPHS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "graphs")
 if not os.path.exists(GRAPHS_PATH):
     os.makedirs(GRAPHS_PATH, exist_ok=True)
-TASKS = ["baseline", "jigsaw", "rotation", "rpl", "exemplar"]
+TASKS = ["baseline", "jigsaw", "rotation", "rpl", "ds_rpl", "exemplar"]
 
 
 def smooth(y, count=10):
