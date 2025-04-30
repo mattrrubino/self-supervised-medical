@@ -171,8 +171,7 @@ def rpl_preprocess(data, grid_size=3, patch_size=(39, 39, 39), jitter=3):
         y_rpl = torch.stack([y for _,y in transformed])
     else:
         x_rpl, y_rpl = rpl_single(data)
-
-    return x_rpl.float().transpose(0, 1), y_rpl.long()
+    return x_rpl.float(), y_rpl.long()
 
 
 # Operates on a single input or multiple inputs
