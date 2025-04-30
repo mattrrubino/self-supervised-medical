@@ -1,3 +1,4 @@
+import os
 from dataloader import load_2dimages
 import torch
 import torchvision.models as models
@@ -73,7 +74,7 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
         val_loss, val_score = validate(model, val_dataloader, criterion, epoch, num_epochs, device, task)
 
         model.train()
-        if (epoch % 25 == 0  or epoch == num_epochs -1) and epoch != 0:
+        if (epoch % 25 == 0  or epoch == num_epochs - 1) and epoch != 0:
             save_checkpoint(model, running_loss, val_loss, epoch, optimizer, task, fold, training_percent)
             print(f"Checkpoint saved at epoch {epoch}")
 
@@ -106,9 +107,14 @@ def save_checkpoint(model, train_loss, val_loss, epoch, optimizer, task,fold=Non
         'val_loss': val_loss 
     }
     if fold is not None:
-        filepath = "./model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + "_fold" + str(fold) + + "training_percent_" + str(training_percent) + ".pth"
+        filepath = "./model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + "_fold" + str(fold) + "training_percent_" + str(training_percent) + ".pth"
     else:
         filepath = "./model_ckpt/" + task + "/" + "checkpoint" + str(epoch) + ".pth"
+    
+    # create parent directory if it doesn't exist
+    directory = os.path.dirname(filepath)
+    os.makedirs(directory, exist_ok=True)
+
     torch.save(checkpoint, filepath)
 
 

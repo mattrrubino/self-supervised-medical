@@ -50,12 +50,20 @@ class Retinal2dDataset(Dataset):
     def preprocess(self):
         for ind, image_name in enumerate(self.image_paths):
             img_name = os.path.join(self.image_dir, image_name)
-            image = Image.open(img_name)
+            # image = Image.open(img_name)
+            try:
+                image = Image.open(img_name)
+                image.load()  # <-- Force loading immediately to catch errors
+                if self.transform:
+                    image = self.transform(image)
+                self.images.append(image)
+            except Exception as e:
+                print(f"Warning: Failed to load image {img_name}. Error: {e}")
             
-            if self.transform:
-                image = self.transform(image)
+            # if self.transform:
+            #     image = self.transform(image)
             
-            self.images.append(image)
+            # self.images.append(image)
             
 
             # elif self.task == "rpl":

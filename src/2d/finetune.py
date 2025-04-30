@@ -14,7 +14,7 @@ import random
 def reset_model_weights(pre_task = "rotate", device="cuda"):
     model = models.densenet121(weights=None)
     if pre_task == "rotate":
-        checkpoint = torch.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/rotate/checkpoint25.pth")
+        checkpoint = torch.load("./model_ckpt/rotate/checkpoint25.pth")
 
         #only used for helping with shape requirments while loading
         model.classifier = torch.nn.Linear(model.classifier.in_features, 4)
@@ -24,11 +24,27 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
 
         model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
 
-    if pre_task == "rpl":
-        checkpoint = torch.load("/Users/aspensmith/Desktop/self-supervised-medical/src/2d/model_ckpt/rpl/checkpoint5.pth")
+    # if pre_task == "rpl":
+    #     checkpoint = torch.load("./model_ckpt/rpl/checkpoint24.pth")
 
-        model.classifier = torch.nn.Linear(model.classifier.in_features, 8)  # 8 relative positions
+    #     model.features.conv0 = torch.nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+    #     model.classifier = torch.nn.Linear(model.classifier.in_features, 8)  # 8 relative positions
+    #     model.load_state_dict(checkpoint["model_state_dict"])
+    #     model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
+
+    if pre_task == "rpl":
+        checkpoint = torch.load("./model_ckpt/rpl/checkpoint24.pth")
+
+        # FIRST: load the model exactly like RPL pretraining
+        model.features.conv0 = torch.nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        model.classifier = torch.nn.Linear(model.classifier.in_features, 8)
         model.load_state_dict(checkpoint["model_state_dict"])
+
+        # SECOND: NOW modify conv0 back to 3 channels for finetuning
+        model.features.conv0 = torch.nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        # THIRD: Replace classifier for 5-class finetuning task
         model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
 
 
@@ -80,14 +96,14 @@ def main():
         
         if(i != 0):
             #we need to reset the model weights after testing on the previous training percent
-            model, optimzer, criterion  = reset_model_weights(pre_task)
+            model, optimzer, criterion  = reset_model_weights(pre_task, device)
             
         mean_kappa_scores = 0
         for fold, (train_ids, val_ids) in enumerate(kfold.split(dataset)):
             
             #reset the model for each fold
             if fold != 0:
-                model, optimzer, criterion  = reset_model_weights(pre_task)
+                model, optimzer, criterion  = reset_model_weights(pre_task, device)
             
             print(f'\nFOLD {fold + 1}')
             print('--------------------------------')

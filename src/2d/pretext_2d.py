@@ -81,8 +81,6 @@ def reform_image(patches):
     return torch.from_numpy(full_image)
 
 
-
-
 def rpl_preprocess(image, grid_size=3, patch_size=(32, 32), jitter=5):
     """
     gen a pair of 2D patches (center, query) and the relative position label between them.
@@ -92,6 +90,7 @@ def rpl_preprocess(image, grid_size=3, patch_size=(32, 32), jitter=5):
         image = image.squeeze(0)
 
     H, W = image.shape
+    print(H, W)
     step_h, step_w = H // grid_size, W // grid_size
 
     centers = []
@@ -139,8 +138,14 @@ def rplify(image, grid_size=3, patch_size=(32, 32), jitter=5):
     """
     from torchvision.transforms import Resize
 
-    image = image.convert("L")  # grayscale
-    image = np.array(image)  # H x W
+    # If image is RGB (3 channels), manually convert it to grayscale
+    if image.ndim == 3 and image.shape[0] == 3:
+        # standard grayscale conversion weights
+        image = 0.299 * image[0] + 0.587 * image[1] + 0.114 * image[2]
+
+    # print(f"Image shape after squeeze: {image.shape}")
+
+    image = image.numpy()
 
     x_pair, label = rpl_preprocess(image, grid_size, patch_size, jitter)  # shape: (2, 32, 32)
     
@@ -151,4 +156,19 @@ def rplify(image, grid_size=3, patch_size=(32, 32), jitter=5):
     x_pair = resize_fn(x_pair)
 
     return x_pair, label
+
+# def test_rplify_on_random_image():
+#     # Create a random fake RGB image (3, 224, 224)
+#     random_image = torch.rand(3, 224, 224)
+
+#     print(f"Input random image shape: {random_image.shape}")
+
+#     # Try to run rplify
+#     x_pair, label = rplify(random_image)
+
+#     print(f"Output x_pair shape: {x_pair.shape}")
+#     print(f"Output label: {label}")
+
+# if __name__ == "__main__":
+#     test_rplify_on_random_image()
 
