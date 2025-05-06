@@ -2,8 +2,6 @@ kaggle
 nibabel
 scikit-image
 numpy
-torch
-torchvision
 matplotlib
 pandas
 scikit-learn

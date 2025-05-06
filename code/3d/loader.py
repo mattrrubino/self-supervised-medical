@@ -11,7 +11,7 @@ from pretext import preprocess
 
 
 # Pancreas dataset path constants
-PANCREAS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "Task07_Pancreas")
+PANCREAS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "data", "Task07_Pancreas")
 PANCREAS_IMAGES_TR = os.path.join(PANCREAS_PATH, "imagesTr")
 PANCREAS_LABELS_TR = os.path.join(PANCREAS_PATH, "labelsTr")
 PANCREAS_IMAGES_PATH = os.path.join(PANCREAS_PATH, "preprocessed", "train")

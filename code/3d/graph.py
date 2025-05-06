@@ -8,9 +8,6 @@ import numpy as np
 from train import RESULTS_PATH
 
 
-GRAPHS_PATH = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "graphs")
-if not os.path.exists(GRAPHS_PATH):
-    os.makedirs(GRAPHS_PATH, exist_ok=True)
 TASKS = ["baseline", "jigsaw", "rotation", "rpl", "exemplar"]
 
 
@@ -38,7 +35,7 @@ def create_train_graph():
     plt.xlabel("Percentage of Labeled Images", fontweight="bold")
     plt.ylabel("Average Dice Score", fontweight="bold")
     plt.legend(loc="lower right")
-    plt.savefig(os.path.join(GRAPHS_PATH, "train_pancreas.png"))
+    plt.savefig(os.path.join(RESULTS_PATH, "train_pancreas.png"))
 
 
 def create_epoch_graph():
@@ -54,7 +51,7 @@ def create_epoch_graph():
     plt.xlabel("Epochs", fontweight="bold")
     plt.ylabel("Average Dice Score", fontweight="bold")
     plt.legend(loc="lower right")
-    plt.savefig(os.path.join(GRAPHS_PATH, "epoch_pancreas.png"))
+    plt.savefig(os.path.join(RESULTS_PATH, "epoch_pancreas.png"))
 
 
 if __name__ == "__main__":

@@ -178,10 +178,7 @@ cython_debug/
 .pypirc
 
 # Project files
-Task07_Pancreas
-._Task07_Pancreas
-results
-graphs
+data/Task07_Pancreas
 
 # MacOS
 .DS_Store

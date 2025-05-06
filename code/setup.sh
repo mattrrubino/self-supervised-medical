@@ -4,15 +4,21 @@
 python3 -m venv venv
 . venv/bin/activate
 pip install --upgrade pip
-pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118
-pip install -r requirements.txt
+pip install torch torchvision --extra-index-url https://download.pytorch.org/whl/cu118
+pip install -r code/requirements.txt
 
 ####################### 3D SETUP #######################
 
 # Download and unzip the data
+echo "Downloading pancreas dataset from Medical Decathlon..."
 wget https://msd-for-monai.s3-us-west-2.amazonaws.com/Task07_Pancreas.tar
+
+echo "Extracting dataset..."
 tar -xf Task07_Pancreas.tar
 rm Task07_Pancreas.tar
+mv Task07_Pancreas data
+
+echo "Dataset is located at: data/Task07_Pancreas"
 
 ####################### 2D SETUP #######################
 
@@ -62,4 +68,4 @@ kaggle competitions download -c aptos2019-blindness-detection
 echo "Extracting dataset..."
 unzip -q '*.zip'
 
-echo "Setup complete! Dataset is located in: $(pwd)"
+echo "Dataset is located at: $(pwd)"
