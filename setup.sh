@@ -52,7 +52,7 @@ fi
 chmod 600 "$KAGGLE_JSON"
 
 # Make directory and download dataset
-DATASET_DIR="src/2d/dataset"
+DATASET_DIR="code/2d/dataset"
 mkdir -p "$DATASET_DIR"
 cd "$DATASET_DIR"
 

@@ -22,7 +22,7 @@ var/
 wheels/
 share/python-wheels/
 dataset/
-src/2d/
+code/2d/
 /
 aptos2019-blindness-detection.zip
 *.egg-info/
