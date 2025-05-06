@@ -12,10 +12,12 @@ from pretext import exemplar_preprocess, jigsaw_preprocess, rotation_preprocess,
 from train import train, RESULTS_PATH
 
 
+PRETEXT_EPOCHS = 1000
+FINETUNE_EPOCHS = 400
 PERCENTS = [5, 10, 25, 50, 100]
 
 
-def run_finetune_experiment(json_file, percent_train, percent_val=0.05, wu_epochs=25, num_epochs=400, batch_size=4, weight_file=None):
+def run_finetune_experiment(json_file, percent_train, percent_val=0.05, wu_epochs=FINETUNE_EPOCHS//16, num_epochs=FINETUNE_EPOCHS, batch_size=4, weight_file=None):
     assert num_epochs >= 1, "Total number of epochs must be greater than or equal to one."
     assert wu_epochs >= 0, "Total number of warmup epochs must be greater than or equal to zero."
     assert num_epochs >= wu_epochs, "Total number of epochs must be greater than or equal to the number of warmup epochs."
@@ -40,7 +42,7 @@ def run_finetune_experiment(json_file, percent_train, percent_val=0.05, wu_epoch
     train(train_dataloader, val_dataloader, wu_epochs, num_epochs, model, optimizer, criterion, metrics, device, json_file)
 
 
-def run_pretext_experiment(json_file, weight_file, pretext_preprocess, create_classifier, criterion, n_classes=None, patches=None, percent_val=0.05, num_epochs=1000, batch_size=4):
+def run_pretext_experiment(json_file, weight_file, pretext_preprocess, create_classifier, criterion, n_classes=None, patches=None, percent_val=0.05, num_epochs=PRETEXT_EPOCHS, batch_size=4):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     generator = torch.Generator().manual_seed(42)
 
@@ -115,10 +117,9 @@ def run_exemplar_experiments():
 
 
 if __name__ == "__main__":
-    pass
-    # run_baseline_experiments()
-    # run_rotation_experiments()
-    # run_rpl_experiments()
-    #run_jigsaw_experiments()
-    #run_exemplar_experiments()
+    run_baseline_experiments()
+    run_rotation_experiments()
+    run_rpl_experiments()
+    run_jigsaw_experiments()
+    run_exemplar_experiments()
 

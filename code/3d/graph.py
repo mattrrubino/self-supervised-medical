@@ -12,6 +12,8 @@ TASKS = ["baseline", "jigsaw", "rotation", "rpl", "exemplar"]
 
 
 def smooth(y, count=10):
+    if len(y) < 40:
+        count = 1
     return np.arange(0, len(y), count), [np.mean(y[i*count:(i+1)*count]) for i in range(len(y)//count)]
 
 

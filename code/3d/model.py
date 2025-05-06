@@ -166,7 +166,6 @@ class MultipatchClassifier(nn.Module):
     def forward(self, x):
         b = x.shape[0]
         x = torch.flatten(x, end_dim=1)
-        x = torch.unsqueeze(x, 1)
         x, _ = self.encoder(x)
         x = x.reshape(b, -1)
         x = self.head(x)

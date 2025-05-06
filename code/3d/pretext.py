@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 
 
-PERMUTATION_FILE = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "src", "permutations", "permutations_100_27.npy")
+PERMUTATION_FILE = os.path.join(os.environ.get("VIRTUAL_ENV", "."), "..", "code", "permutations", "permutations_100_27.npy")
 PERMUTATIONS = np.load(PERMUTATION_FILE)
 
 
@@ -163,7 +163,7 @@ def rpl_preprocess(data, grid_size=3, patch_size=(39, 39, 39), jitter=3):
         xq = patches[query_idx].unsqueeze(0)
 
         rel_label = query_idx if query_idx < center_idx else query_idx - 1
-        return (torch.cat([xc, xq], dim=0), torch.tensor(rel_label))
+        return (torch.cat([xc, xq], dim=0).unsqueeze(1), torch.tensor(rel_label))
 
     if data.ndim == 5:
         transformed = [rpl_single(x) for x in data]
