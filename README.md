@@ -1,3 +1,8 @@
+# Introdcution
+This project aims to reimplement the Paper ("3D Self-Supervised Methods for Medical Imaging")[https://arxiv.org/abs/2006.03829] ((original repo))[https://github.com/HealthML/self-supervised-3d-tasks] where we pretrain on two separate 2D classification and 3D segmentation tasks.  This paper demonstrates that 3D pretext tasks substantially improve downstream segmentation and classification accuracy, especially in small data regimes. Their key contributions are: 1) Formulation of five 3D SSL tasks, 2) Open‑source implementations of SSL tasks, and 3) Comprehensive evaluations on pancreas tumor segmentation, brain tumor segmentation, and diabetic retinopathy classification, empirically demonstrating efficiency gains produced by SSL.
+
+
+
 # Self-Supervised Medical
 
 This project requires installing Python (preferably 3.12) with the `venv` module.
