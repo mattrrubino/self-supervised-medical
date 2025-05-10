@@ -179,6 +179,7 @@ cython_debug/
 
 # Project files
 data/Task07_Pancreas
+data/fundus
 
 # MacOS
 .DS_Store
