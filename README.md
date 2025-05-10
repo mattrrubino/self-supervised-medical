@@ -73,6 +73,17 @@ Follow the CLI prompts for which task you wish to finetune for.
 ### Pretraining
 
 
+## Results/Insights
+Our data efficiency graphs are included below (left is pancreas and right is fundus), where we observe similar trends to the authors. Specifically, all of the pretext tasks, with the exception of exemplar, improve downstream task efficiency.
+
+<p float="left">
+  <img src="results/all3.png" width="45%" />
+  <img src="results/train_pancreas.png" width="45%" />
+</p>
+
+
+
+
 
 
 
