@@ -8,6 +8,8 @@ We recreated the pancreas segmentation data-efficiency curves (left, from Figure
 
 
 
+
+
 # Self-Supervised Medical
 
 This project requires installing Python (preferably 3.12) with the `venv` module.
