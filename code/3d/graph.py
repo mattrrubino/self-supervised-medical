@@ -40,23 +40,6 @@ def create_train_graph():
     plt.savefig(os.path.join(RESULTS_PATH, "train_pancreas.png"))
 
 
-def create_epoch_graph():
-    plt.figure(figsize=(6, 4))
-    for task in TASKS:
-        filepath = os.path.join(RESULTS_PATH, f"{task}_pancreas_100.json")
-        with open(filepath) as f:
-            data = json.load(f)
-        x, y = smooth([d["validation_dice"] for d in data])
-        plt.plot(x, y, label=task, marker="o")
-
-    plt.grid()
-    plt.xlabel("Epochs", fontweight="bold")
-    plt.ylabel("Average Dice Score", fontweight="bold")
-    plt.legend(loc="lower right")
-    plt.savefig(os.path.join(RESULTS_PATH, "epoch_pancreas.png"))
-
-
 if __name__ == "__main__":
     create_train_graph()
-    create_epoch_graph()
 
