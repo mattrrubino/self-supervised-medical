@@ -49,8 +49,8 @@ cd self-supervised-medical
 source venv/bin/activate
 ```
 
-# Running 2D Case
-## Pretraining
+## Running 2D Case
+### Pretraining
 To pretrain the 2D models, first navigate to code/2d/ directory. Simply run:
 
 ```
@@ -67,6 +67,10 @@ python finetune.py
 ```
 
 Follow the CLI prompts for which task you wish to finetune for. 
+
+
+## Running 3D Case
+### Pretraining
 
 
 
