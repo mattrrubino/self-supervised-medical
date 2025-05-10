@@ -102,8 +102,8 @@ def load_2dimages(batch_size = 32, train_split = .95, task = "rotate"):
     ])
 
     image_dataset = Retinal2dDataset(
-        preds_file= str(Path(__file__).parent.parent.parent / "dataset/2d/train.csv"), 
-        image_dir=str(Path(__file__).parent.parent.parent / "dataset/2d/train_images"), 
+        preds_file= str(Path(__file__).parent.parent.parent / "data/fundus/train.csv"), 
+        image_dir=str(Path(__file__).parent.parent.parent / "data/fundus/train_images"), 
         transform=transform,
         task=task
     )
