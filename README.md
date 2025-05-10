@@ -8,7 +8,7 @@ This project aims to reimplement the Paper ["3D Self-Supervised Methods for Medi
 ## Results Chosen for Re-Implemenation
 We recreated the pancreas segmentation data-efficiency curves (left, from Figure 3 of Taleb et al.) on a 3D UNet for four of the five SSL tasks: jigsaw, rotation, rpl, and exemplar. Rotation, jigsaw, rpl are trained with cross entropy loss, where each target class is 10, 100, 25 respectively, following the equation below:
 
-![Cross Entropy](https://latex.codecogs.com/png.image?\dpi{120} \mathcal{L}_{\text{LRP}} = - \sum_{k=1}^{K} \log p(y_q \mid \hat{y}_q, \{y_n\}))
+![Cross Entropy](results/cross_entropy.png)
 
 For exemplar training, contrastive loss is used, where the taget class is 1024 embeddings size, following the loss function below:
 
