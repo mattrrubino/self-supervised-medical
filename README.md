@@ -6,7 +6,19 @@ This project aims to reimplement the Paper ["3D Self-Supervised Methods for Medi
 
 
 ## Results Chosen for Re-Implemenation
-We recreated the pancreas segmentation data-efficiency curves (left, from Figure 3 of Taleb et al.) on a 3D UNet for four of the five SSL tasks: jigsaw, rotation, rpl, and exemplar. Rotation, jigsaw, rpl are trained with cross entropy loss, where each target class is 10, 100, 25 respectively, following the equation below:
+We recreated the pancreas segmentation data-efficiency curves (left, from Figure 3 of Taleb et al.) on a 3D UNet for four of the five SSL tasks: jigsaw, rotation, rpl, and exemplar. 
+
+<p float="left">
+  <img src="results/og1.png" width="45%" />
+  <img src="results/og2.png" width="45%" />
+</p>
+
+
+## Code Layout
+All code relevant to this project is in the `code` directory. We have split the code into `3d` and `2d` for better separation and understanding of how the pre-text and training tasks work. See the Install section below on how to install necessary dependencies and run the code.
+
+## Re-implementation Details
+Rotation, jigsaw, rpl are trained with cross entropy loss, where each target class is 10, 100, 25 respectively, following the equation below:
 
 ![Cross Entropy](results/cross_entropy.png)
 
@@ -16,14 +28,8 @@ For exemplar training, contrastive loss is used, where the taget class is 1024 e
 
 We pretrained the model on unlabeled CT volumes and finetuned on the same subsampled sets of labeled scans from the [Medical Segmentation Decathlon dataset](http://medicaldecathlon.com/), assessing downstream performance with Dice score. We also reproduced the diabetic retinopathy data‑efficiency curves (right, from Figure 4 of Taleb et al.) on a DenseNet‑121 backbone. We pretrained the model on [2D UK Biobank fundus images](https://www.kaggle.com/competitions/aptos2019-blindness-detection), and we measured downstream classification performance with Quadratic Weighted Kappa. The finetuning procedure for both tasks involves training on 5%, 10%, 25%, 50%, and 100% (we utilize 5-k fold cross validation for 2D on each data %) of the training data and measuring downstream performance. This result is central to the paper’s main claim that self‑supervised pretraining markedly boosts performance in low‑annotation regimes, providing a clear, quantitative benchmark for comparing the SSL task effectiveness. By faithfully reproducing both results, we confirm that self‑supervised pretraining substantially accelerates convergence and improves accuracy in low‑annotation regimes, and validates our PyTorch implementations.
 
-<p float="left">
-  <img src="results/og1.png" width="45%" />
-  <img src="results/og2.png" width="45%" />
-</p>
 
-
-
-## Install
+## Install & Reproduction Steps
 This project requires installing Python (preferably 3.12) with the `venv` module.
 It also assumes you have CUDA installed, with version 11.8 or greater. If this is
 not the case, you may need to modify the PyTorch installation in `setup.sh`.
