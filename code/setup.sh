@@ -67,5 +67,6 @@ kaggle competitions download -c aptos2019-blindness-detection
 
 echo "Extracting dataset..."
 unzip -q '*.zip'
+rm *.zip
 
 echo "Dataset is located at: $(pwd)"
