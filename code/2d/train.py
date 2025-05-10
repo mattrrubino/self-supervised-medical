@@ -168,11 +168,11 @@ def validate(model, val_dataloader, criterion, epoch, num_epochs, device, task):
 
 
 def main(num_epochs=20):
-    model = models.densenet121(weights=None)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Using device: " + str(device))
 
     for task in TASKS:
+        model = models.densenet121(weights=None)
         print(f"preprocessing images for {task}, this might take a moment ...")
         #permuation is only used for the jigaw task will not be used for the other tasks
         train_dataloader, val_dataloader, permuation = load_images(task=task, batch_size=8)
