@@ -35,7 +35,7 @@ To finetune the 2d moels, first navigate to code/2d/ directory. First open the f
 python finetune.py
 ```
 
-Follow the cli prompts for which task you wish to finetune for. 
+Follow the CLI prompts for which task you wish to finetune for. 
 
 
 
