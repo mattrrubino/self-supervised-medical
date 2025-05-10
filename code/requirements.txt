@@ -1,0 +1,8 @@
+kaggle
+nibabel
+scikit-image
+numpy
+matplotlib
+pandas
+scikit-learn
+pathlib
