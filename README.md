@@ -68,6 +68,7 @@ python finetune.py
 
 Follow the CLI prompts for which task you wish to finetune for. 
 
+All Reulsts for 2d were obtained using an rtx 4070 super 12gb, with a 28core cpu, and 32gb of ram
 
 ## Running 3D Case
 ### Pretraining
@@ -80,6 +81,22 @@ Our data efficiency graphs are included below (left is pancreas and right is fun
   <img src="results/all3.png" width="45%" />
   <img src="results/train_pancreas.png" width="45%" />
 </p>
+
+
+## Conclusion
+Our reimplementation of Taleb et al.’s 3D self-supervised methods proved both challenging and enlightening. The most striking lesson was how dramatically pretraining on unlabeled 3D data improved downstream performance when labeled data was scarce, confirming the paper’s central thesis that self-supervision can address the annotation bottleneck in medical imaging. We encountered unexpected implementation hurdles with memory constraints when scaling to larger 3D volumes, but despite this, our results largely followed the original paper’s. The worse exemplar performance compared to the paper suggests that our negative sampling approach may need to be optimized. In future experiments, we would like to explore more efficient 3D architectures and test them on multimodal datasets as a potential extension of the project. 
+
+## Refernces
+[1] 	A. Taleb et al., ‘3D self-supervised methods for medical imaging’, in Proceedings of the 34th 
+International Conference on Neural Information Processing Systems, Vancouver, BC, Canada, 2020.
+[2] 	O. Ronneberger, P. Fischer, and T. Brox, ‘U-Net: Convolutional Networks for Biomedical Image 
+Segmentation’, in Medical Image Computing and Computer-Assisted Intervention -- MICCAI 2015, 2015, pp. 234–241.
+[3] 	A. Simpson et al., ‘A large annotated medical image dataset for the development
+and evaluation of segmentation algorithms’, CoRR, vol. abs/1902.09063, 2019.
+[3] 	M. Karthik and S. Dane, ‘APTOS 2019 Blindness Detection’, Kaggle, 2019.
+[5] 	G. Huang, Z. Liu, L. Van Der Maaten, and K. Q. Weinberger, ‘Densely Connected Convolutional 
+Networks’, in 2017 IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2017, pp. 2261–2269.
+
 
 
 
