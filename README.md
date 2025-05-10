@@ -16,6 +16,7 @@ Then, execute the following:
 git clone git@github.com:mattrrubino/self-supervised-medical.git
 cd self-supervised-medical
 ./code/setup.sh
+source venv/bin/activate
 ```
 
 # Running 2D Case
