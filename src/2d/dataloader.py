@@ -6,7 +6,7 @@ import pandas as pd
 import os 
 from pathlib import Path
 
-from pretext_2d import rotate_2dimages, rplify, jigsawify
+from pretext_2d import rotate_2dimages, rplify, jigsawify, exemplar_preprocess
 from torch.utils.data import random_split
 from torchvision.transforms.functional import to_pil_image, to_tensor
 import torch
@@ -60,22 +60,6 @@ class Retinal2dDataset(Dataset):
             except Exception as e:
                 print(f"Warning: Failed to load image {img_name}. Error: {e}")
             
-            # if self.transform:
-            #     image = self.transform(image)
-            
-            # self.images.append(image)
-            
-
-            # elif self.task == "rpl":
-            #     x_pair, rel_label = rplify(image)
-            #     self.rpl_pairs.append(x_pair)
-            #     self.rpl_labels.append(rel_label)
-
-            # elif self.task == "finetune":
-            #     if self.transform:
-            #         image = self.transform(image)
-            #     self.images.append(image)
-
     #     return img, label
     def __getitem__(self, idx):
         img = self.images[idx]
@@ -93,6 +77,11 @@ class Retinal2dDataset(Dataset):
             img, label = jigsawify(img, self.is_training, self.num_patches, self.jitter, self.permutation)
             # img = torch.from_numpy(img)
             label = torch.from_numpy(label)
+        
+        if self.task == "exe":
+            #lablel is a tuple of positive and negative values
+            label = exemplar_preprocess(img)
+
 
         #we want the actual labels for the finetune task
         if self.task == "finetune":

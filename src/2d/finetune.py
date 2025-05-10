@@ -34,7 +34,7 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
     #     model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
 
     if pre_task == "rpl":
-        checkpoint = torch.load("./model_ckpt/rpl/checkpoint24.pth")
+        checkpoint = torch.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/model_ckpt/rpl/checkpoint99.pth")
 
         # FIRST: load the model exactly like RPL pretraining
         model.features.conv0 = torch.nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -45,6 +45,17 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
         model.features.conv0 = torch.nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
 
         # THIRD: Replace classifier for 5-class finetuning task
+        model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
+    
+    if pre_task == "exe":
+        checkpoint = torch.load("./model_ckpt/exe/checkpoint9.pth")
+
+        #only used for helping with shape requirments while loading
+        model.classifier = torch.nn.Linear(model.classifier.in_features, model.classifier.in_features)
+        
+        #load everything except the pretrained classifier
+        model.load_state_dict(checkpoint["model_state_dict"])
+
         model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
 
 
@@ -58,6 +69,11 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
         #load everything except the pretrained classifier
         model.load_state_dict(checkpoint["model_state_dict"])
 
+        model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
+
+    #Used for baseline
+    else:
+        print("using baseline")
         model.classifier = torch.nn.Linear(model.classifier.in_features, 5)
 
 
@@ -74,7 +90,7 @@ def reset_model_weights(pre_task = "rotate", device="cuda"):
     
 
 def main():
-    pre_task = input("What task are we finetuning for (rotate/rpl/jigsaw): ")
+    pre_task = input("What task are we finetuning for (rotate/rpl/jigsaw/base/exe): ")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Using device: " + str(device))
     

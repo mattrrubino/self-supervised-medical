@@ -44,7 +44,8 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
 
         for inputs, labels in train_dataloader:
             inputs = inputs.to(device)
-            labels = labels.to(device)
+            if task != "exe":
+                labels = labels.to(device)
             optimizer.zero_grad()
             
             outputs = model(inputs)
@@ -53,11 +54,21 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
                 labels = labels.squeeze()
             elif task == "rpl":
                 labels = labels.squeeze().long()
-            loss = criterion(outputs, labels)
+    
+            if task != "exe":    
+                loss = criterion(outputs, labels)
+                all_labels = all_labels + labels.cpu().tolist()
+                all_outputs = all_outputs + torch.argmax(outputs.detach(), dim=1).cpu().tolist()
+            
+            else:
+                #positive, negative, and achor
+                positive = labels[0].to(device)
+                negative = labels[1].to(device)
+                positive = model(positive)
+                negative = model(negative)
+                loss = criterion(outputs, positive, negative)
             
             
-            all_labels = all_labels + labels.cpu().tolist()
-            all_outputs = all_outputs + torch.argmax(outputs.detach(), dim=1).cpu().tolist()
 
             
             loss.backward()
@@ -67,10 +78,10 @@ def train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criter
         running_loss = running_loss / len(train_dataloader)
         
         print(f'Epoch {epoch+1}/{num_epochs}, Loss: {running_loss}')
-        metrics(all_outputs, all_labels, task, "train")
+        if task != "exe":
+            metrics(all_outputs, all_labels, task, "train")
 
         
-
         val_loss, val_score = validate(model, val_dataloader, criterion, epoch, num_epochs, device, task)
 
         model.train()
@@ -127,7 +138,8 @@ def validate(model, val_dataloader, criterion, epoch, num_epochs, device, task):
     
     for inputs, labels in val_dataloader:
         inputs = inputs.to(device)
-        labels = labels.to(device)
+        if task != "exe":
+            labels = labels.to(device)
         outputs = model(inputs)
         
         if task == "rotate" or task == "jigsaw":
@@ -135,16 +147,28 @@ def validate(model, val_dataloader, criterion, epoch, num_epochs, device, task):
             labels = labels.squeeze()
         elif task == "rpl":
             labels = labels.squeeze().long()
-        loss = criterion(outputs, labels)
-
-        all_labels = all_labels + labels.cpu().tolist()
-        all_outputs = all_outputs + torch.argmax(outputs.detach(), dim=1).cpu().tolist() 
+        
+        if task != "exe":
+            loss = criterion(outputs, labels)
+            all_labels = all_labels + labels.cpu().tolist()
+            all_outputs = all_outputs + torch.argmax(outputs.detach(), dim=1).cpu().tolist() 
+        else:
+            #positive, negative, and achor
+            positive = labels[0].to(device)
+            negative = labels[1].to(device)
+            positive = model(positive)
+            negative = model(negative)
+            loss = criterion(outputs, positive, negative)
 
         running_loss += loss.item()
     
     running_loss = running_loss / len(val_dataloader)
     print(f'Epoch {epoch+1}/{num_epochs}, Validation Loss: {running_loss}')
-    score = metrics(all_outputs, all_labels, task, "val", epoch, num_epochs)
+    
+    if task != "exe":
+        score = metrics(all_outputs, all_labels, task, "val", epoch, num_epochs)
+    else:
+        score = None
     
     return running_loss, score
 
@@ -157,34 +181,45 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-    task = input("What Task are we solving for (rotate/rpl/jigsaw): ")
+    task = input("What Task are we solving for (rotate/rpl/jigsaw/exe): ")
     num_epochs = int(input("How many epochs we trying to do (Reccomend around 15-25 for training for 2D tasks): "))
 
     print("Using device: " + str(device))
      
     print("preprocessing images, this might take a moment ...")
     #permuation is only used for the jigaw task will not be used for the other tasks
-    train_dataloader, val_dataloader, permuation = load_2dimages(task=task)
+    train_dataloader, val_dataloader, permuation = load_2dimages(task=task, batch_size=8)
     print("preprocessing done, begining training ...")
 
     
     if task == "rotate":
         #We are predicting four classes for the densenet rotation
         model.classifier = torch.nn.Linear(model.classifier.in_features, 4)
+        optimizer = optim.Adam(model.parameters(), lr=0.0005)
+        criterion = nn.CrossEntropyLoss()
+
 
     if task == "jigsaw":
         model.classifier = torch.nn.Linear(model.classifier.in_features, len(permuation[0]))
+        optimizer = optim.Adam(model.parameters(), lr=0.0005)
+        criterion = nn.CrossEntropyLoss()
+
 
     
     elif task == "rpl":
         # first conv layer accepts 2 input channels
         model.features.conv0 = torch.nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=3, bias=False)
         model.classifier = torch.nn.Linear(model.classifier.in_features, 8)
+        optimizer = optim.Adam(model.parameters(), lr=0.0005)
+        criterion = nn.CrossEntropyLoss()
+
+
+    elif task == "exe":
+        model.classifier = torch.nn.Linear(model.classifier.in_features, model.classifier.in_features)
+        optimizer = optim.Adam(model.parameters(), lr=0.0005)
+        criterion = nn.TripletMarginLoss(margin=1.0, p=2)
     
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
-    criterion = nn.CrossEntropyLoss()
-
     train(train_dataloader, val_dataloader, num_epochs, model, optimizer, criterion, task, device)
     
      
