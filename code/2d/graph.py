@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-rot = np.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/graphs_and_data/kappa_scores_rotate.npy")
-jigsaw = np.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/graphs_and_data/kappa_scores_jigsaw2.npy")
-base = np.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/graphs_and_data/kappa_scores_base.npy")
-rpl = np.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/graphs_and_data/kappa_scores_rpl.npy")
-exe = np.load("/home/caleb/school/deep_learning/self-supervised-medical/src/2d/graphs_and_data/kappa_scores_exe.npy")
 
+rot = np.load("results/kappa_scores_rotate.npy")
+jigsaw = np.load("results/kappa_scores_jigsaw.npy")
+base = np.load("results/kappa_scores_base.npy")
+rpl = np.load("results/kappa_scores_rpl.npy")
+exe = np.load("results/kappa_scores_exe.npy")
 
 training_percent = [5, 10, 25, 50, 100]
 
@@ -25,6 +25,6 @@ plt.grid()
 plt.xlabel('Percentage of labeled images', fontweight="bold")
 plt.ylabel('Average validation kappa score', fontweight="bold")
 plt.grid(True)
-plt.show()
+plt.savefig("results/train_fundus.png")
 
 

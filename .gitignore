@@ -22,9 +22,7 @@ var/
 wheels/
 share/python-wheels/
 dataset/
-code/2d/
-/
-aptos2019-blindness-detection.zip
+code/2d/model_ckpt
 *.egg-info/
 .installed.cfg
 *.egg
