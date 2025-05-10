@@ -29,7 +29,7 @@ python train2D.py
 Follow the prompting intructions on the CLI to see what pretext tasks you wish to run
 
 ## Finetuning
-To finetune the 2d moels, first navigate to code/2d/ directory. First open the file `finetune.py` and change any nesseccary checkpoint files (if nessecary) in `reset_model_weights` function. Then simply run:
+To finetune the 2d moels, first navigate to code/2d/ directory. First open the file `finetune.py` and change checkpoint files (if nessecary) in `reset_model_weights` function. Then simply run:
 
 ```
 python finetune.py
