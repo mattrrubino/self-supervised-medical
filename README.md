@@ -17,3 +17,15 @@ git clone git@github.com:mattrrubino/self-supervised-medical.git
 cd self-supervised-medical
 ./code/setup.sh
 ```
+
+# Running 2D Case
+To pretrain the 2D models, first navigate to code/2d/ directory. Simply run:
+
+```
+python train2D.py
+```
+
+Follow the prompting intructions on the CLI to see what pretext tasks you wish to run
+
+
+
