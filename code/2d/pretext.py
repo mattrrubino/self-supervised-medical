@@ -5,6 +5,7 @@ import torch
 import torchvision.transforms as transforms
 import math 
 import torch.nn.functional as F
+
 # @def rotates a single 2d image and and then returns the classifcation
 # the rotation classification for prediction
 # @param is a PIL image to be rotated
@@ -87,8 +88,6 @@ def exemplar_preprocess(data):
 
     
     return (positive, negative)
-
-
 
 
 #used for exexmplar task

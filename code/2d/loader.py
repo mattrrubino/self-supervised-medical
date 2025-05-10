@@ -1,12 +1,12 @@
 import numpy as np
-from torchvision import datasets, transforms
+from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 import pandas as pd
 import os 
 from pathlib import Path
 
-from pretext_2d import rotate_2dimages, rplify, jigsawify, exemplar_preprocess
+from pretext import rotate_2dimages, rplify, jigsawify, exemplar_preprocess
 from torch.utils.data import random_split
 from torchvision.transforms.functional import to_pil_image, to_tensor
 import torch
@@ -92,7 +92,7 @@ class Retinal2dDataset(Dataset):
         return img, label
 
 
-def load_2dimages(batch_size = 32, train_split = .95, task = "rotate"):
+def load_images(batch_size = 32, train_split = .95, task = "rotate"):
 
     # Only use transform for rotate and finetune
     transform = None

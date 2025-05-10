@@ -45,30 +45,39 @@ cd self-supervised-medical
 source venv/bin/activate
 ```
 
-## Running 2D Case
-### Pretraining
-To pretrain the 2D models, first navigate to code/2d/ directory. Simply run:
+### Running 3D Case
+To train and finetune the 3D models, run the following from the project root:
 
-```
-python train2D.py
-```
-
-Follow the prompting intructions on the CLI to see what pretext tasks you wish to run
-
-## Finetuning
-To finetune the 2d moels, first navigate to code/2d/ directory. First open the file `finetune.py` and change checkpoint files (if nessecary) in `reset_model_weights` function. Then simply run:
-
-```
-python finetune.py
+```bash
+python code/3d/exp.py
 ```
 
-Follow the CLI prompts for which task you wish to finetune for. 
+Note that this will take several days to run. You can reduce the amount of time it takes by lowering `PRETEXT_EPOCHS` and `FINETUNE_EPOCHS` in `code/3d/exp.py`. However, this will affect performance.
 
-All Reulsts for 2d were obtained using an rtx 4070 super 12gb, with a 28core cpu, and 32gb of ram
+After training the models, you can generate the result graphs by running the following from the project root:
 
-## Running 3D Case
-### Pretraining
+```bash
+python code/3d/graph.py
+```
 
+The output graph will be located at `results/train_pancreas.png`.
+
+### Running 2D Case
+To train and finetune the 2D models, run the following from the project root:
+
+```bash
+python code/2d/exp.py
+```
+
+Note that this will take a long time to run. You can reduce the amount of time it takes by lowering `PRETEXT_EPOCHS` and `FINETUNE_EPOCHS` in `code/2d/exp.py`. However, this will affect performance.
+
+After training the models, you can generate the result graphs by running the following from the project root:
+
+```bash
+python code/2d/graph.py
+```
+
+The output graph will be located at `results/train_fundus.png`.
 
 ## Results/Insights
 Our data efficiency graphs are included below (left is pancreas and right is fundus), where we observe similar trends to the authors. Specifically, all of the pretext tasks, with the exception of exemplar, improve downstream task efficiency.
