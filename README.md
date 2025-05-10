@@ -12,7 +12,7 @@ We recreated the pancreas segmentation data-efficiency curves (left, from Figure
 
 For exemplar training, contrastive loss is used, where the taget class is 1024 embeddings size, following the loss function below:
 
-![Loss Function](https://latex.codecogs.com/png.image?\dpi{120} \mathcal{L}_{\text{Exe}} = \frac{1}{N_T} \sum_{i=1}^{N_T} \max(0, D(z_i, z_i^+) - D(z_i, z_i^-) + \alpha))
+![Loss Function](results/constrastive_loss.png)
 
 We pretrained the model on unlabeled CT volumes and finetuned on the same subsampled sets of labeled scans from the [Medical Segmentation Decathlon dataset](http://medicaldecathlon.com/), assessing downstream performance with Dice score. We also reproduced the diabetic retinopathy data‑efficiency curves (right, from Figure 4 of Taleb et al.) on a DenseNet‑121 backbone. We pretrained the model on [2D UK Biobank fundus images](https://www.kaggle.com/competitions/aptos2019-blindness-detection), and we measured downstream classification performance with Quadratic Weighted Kappa. The finetuning procedure for both tasks involves training on 5%, 10%, 25%, 50%, and 100% (we utilize 5-k fold cross validation for 2D on each data %) of the training data and measuring downstream performance. This result is central to the paper’s main claim that self‑supervised pretraining markedly boosts performance in low‑annotation regimes, providing a clear, quantitative benchmark for comparing the SSL task effectiveness. By faithfully reproducing both results, we confirm that self‑supervised pretraining substantially accelerates convergence and improves accuracy in low‑annotation regimes, and validates our PyTorch implementations.
 
